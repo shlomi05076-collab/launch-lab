@@ -51,7 +51,7 @@ The north star rewards the behavior that delivers the value (testing alternative
 ## What v1 does
 
 - Inputs: audience size, price (subscription or one-time), up to 4 channels with a budget split, launch window (start month + weeks).
-- Monte Carlo simulation through reach → visit → sign-up → activation → paying user, with worst / likely / best ranges instead of one number.
+- Monte Carlo simulation through reach → visit → sign-up → activation → paying user, with downside / likely / upside ranges (P10 / P50 / P90) instead of one number.
 - Revenue, CAC and payback period per scenario.
 - Sensitivity analysis showing which input matters most.
 - Drop-off visualization for each funnel stage.

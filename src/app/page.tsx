@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LaunchReadout } from "@/components/preview/LaunchReadout";
 import { site } from "@/lib/site";
 
@@ -10,7 +11,7 @@ const steps = [
   {
     n: "02",
     title: "Run 5,000 futures",
-    body: "A Monte Carlo simulation moves buyers from reach to paying user and returns worst, likely and best case, not one number pretending to be certain.",
+    body: "A Monte Carlo simulation moves buyers from reach to paying user and returns a downside, likely and upside outcome, not one number pretending to be certain.",
   },
   {
     n: "03",
@@ -32,7 +33,10 @@ export default function HomePage() {
             the one assumption that matters most.
           </p>
           <p className="label">
-            Opens in <span className="text-ink">M2</span> · follow the build on GitHub
+            Interactive lab opens in <span className="text-ink">M2</span> ·{" "}
+            <Link href="/lab" className="text-ink underline decoration-rule underline-offset-4">
+              See the engine's first results
+            </Link>
           </p>
         </div>
         <div className="border border-rule bg-surface p-5 sm:p-6">

@@ -9,7 +9,7 @@ This is a portfolio project for **product manager and product marketing** roles.
 
 ## Status
 
-Current milestone: **M1 – Simulation engine** (see [Milestones](#milestones)). Update this line when a milestone ships.
+Current milestone: **M2 – Single-scenario lab** (see [Milestones](#milestones)). Update this line when a milestone ships.
 
 - **Live:** https://launch-lab-phi.vercel.app (Vercel Hobby, auto-deploys every push to `main`)
 - **Repo:** https://github.com/shlomi05076-collab/launch-lab (public). Commits use the noreply email set in the repo-local git config. Keep it that way.
@@ -20,8 +20,9 @@ Current milestone: **M1 – Simulation engine** (see [Milestones](#milestones)).
 - **Pricing:** monthly subscription by default (price, gross margin, monthly churn). A one-time price is an option.
 - **Launch window** = start month + length in weeks (2–26). The start month sets a seasonality multiplier, and results are produced week by week.
 - **Share links** carry the scenario inputs in the URL: versioned and compressed. There is no backend and no database. Results are reproducible because each scenario carries its own random seed.
-- **Uncertainty language:** Worst / Likely / Best = P10 / P50 / P90 of the simulated runs. The main UI says "worst / likely / best", and tooltips and the methodology page give the percentiles.
-- **First load** shows a sample product (Briefly, AI meeting notes for small teams, $12/mo) with 3 ready-made scenarios: *Paid-heavy*, *Community-led* and *Balanced*. A first-time visitor never sees an empty state.
+- **Uncertainty language:** **Downside (P10) / Likely (P50) / Upside (P90)**, everywhere: UI, docs, code, copy. **Never "worst/best"**, because P10 is not the worst case: 10% of simulated launches did worse than the downside. For costs (CAC, payback), downside is the P90 because higher is worse. Always map through `toOutcomeRange()` in `engine/outcomes.ts`, never by hand.
+- **First load** shows a sample product (Briefly, AI meeting notes for small teams, $49 per team per month) with 3 ready-made scenarios: *High-intent search*, *Social push* and *Balanced mix* (`src/data/sampleScenarios.ts`). They share budget, audience, window and funnel, so only the channel mix differs. A first-time visitor never sees an empty state.
+- **Channels (v1):** paid search, paid social (Meta), LinkedIn ads, newsletter sponsorships, creators/influencers, content & SEO. Community, Product Hunt and partnerships were dropped because no credible benchmarks exist to source their defaults.
 - **Every default is a labeled assumption.** Each default value in `src/data/` (CPMs, click-through rates, conversion rates, churn, seasonality) is an `Assumption` record with a source and an as-of date. Each is documented in `docs/model.md` and shown in the UI with an "assumption" marker whose tooltip gives the source and date. Users can edit any of them. No unlabeled magic numbers.
 - **Insight first.** Every results view (single scenario, sensitivity, comparison, shared report) leads with **one plain-English sentence** with the key takeaway, *before* any chart. Example: "Balanced pays back in 7 months; Paid-heavy reaches more users but has a 40% chance of never paying back." The sentence comes from the results by tested, pure code in `src/insights/`. It is never hand-written per screen.
 - **Product analytics** are privacy-friendly: no cookies and no personal data. They track the core funnel (lab opened → first simulation run → scenario edited → scenarios compared → report shared → report opened). Events are documented in `docs/metrics.md` and implemented in M5. The north star is **scenarios compared per active user per week**.
@@ -114,26 +115,30 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
    │  ├─ report/page.tsx        # read-only shared report (?s=<encoded>)
    │  ├─ report/opengraph-image.tsx  # dynamic share preview card
    │  └─ methodology/page.tsx   # human-readable version of docs/model.md
-   ├─ engine/                   # PURE. No React/DOM. Fully unit-tested.
-   │  ├─ index.ts               # public API: simulate(), runSensitivity()
-   │  ├─ types.ts
-   │  ├─ rng.ts                 # mulberry32, seed derivation
-   │  ├─ distributions.ts       # PERT, lognormal, binomial (normal approx)
-   │  ├─ channels.ts            # spend → impressions → saturating reach
-   │  ├─ seasonality.ts
-   │  ├─ funnel.ts              # reach → visit → sign-up → activation → paying
-   │  ├─ economics.ts           # revenue, MRR, CAC, payback
-   │  ├─ monteCarlo.ts          # run loop + aggregation
-   │  ├─ sensitivity.ts         # tornado analysis
+   ├─ engine/                   # PURE. No React/DOM/Next. purity.test.ts enforces it.
+   │  ├─ index.ts               # public API: simulate, expectedLaunch, runSensitivity, toOutcomeRange
+   │  ├─ types.ts               # the engine's whole contract (inputs, results)
+   │  ├─ rng.ts                 # mulberry32
+   │  ├─ distributions.ts       # PERT via inverse-CDF table, normal, Φ, binomial
+   │  ├─ channels.ts            # ramps, spend → impressions, uniquePeople() saturation
+   │  ├─ seasonality.ts         # launch week → calendar month
+   │  ├─ funnel.ts              # runLaunch(): one simulated launch, week by week
+   │  ├─ economics.ts           # CAC, payback (with lifetime cap), weekly retention
+   │  ├─ monteCarlo.ts          # parameter draws (+ market response), run loop, aggregation
+   │  ├─ sensitivity.ts         # tornado analysis (P10/P90 swings, expected-value runs)
+   │  ├─ outcomes.ts            # downside/likely/upside direction rule
    │  ├─ stats.ts               # percentiles, histograms
-   │  └─ *.test.ts              # colocated tests
+   │  ├─ sanity.test.ts         # the hand-calculated worked example from docs/model.md
+   │  ├─ properties.test.ts     # fast-check invariants on random scenarios
+   │  └─ *.test.ts              # other colocated tests
    ├─ insights/                 # PURE. results → ranked findings + headline sentence (+ tests)
    ├─ design/
    │  ├─ palette.ts             # color values per theme; mirrored in globals.css (test-enforced)
    │  └─ fonts.ts               # next/font setup; each trio sets --ff-display/--ff-body/--ff-mono
-   ├─ data/
-   │  ├─ channelBenchmarks.ts   # Assumption records per channel (value, source, asOf)
-   │  ├─ seasonality.ts         # Assumption records per month
+   ├─ data/                     # every default, as Assumption records (assumptions.test.ts)
+   │  ├─ assumption.ts          # Assumption<T>: value, source, asOf, why, confidence
+   │  ├─ channelBenchmarks.ts   # per-channel CPM, CTR, intent, ramp
+   │  ├─ modelDefaults.ts       # seasonality, market correlation, funnel, churn, margin
    │  └─ sampleScenarios.ts     # Briefly + 3 scenarios
    ├─ schema/
    │  ├─ scenario.ts            # Zod schemas (inputs to the engine)
@@ -161,98 +166,26 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
 
 ## Data model
 
-The code is the source of truth once it exists (`src/engine/types.ts`, `src/schema/scenario.ts`). This is the intended shape.
+**The code is the source of truth:** `src/engine/types.ts` (engine contract) and `src/data/assumption.ts`. `docs/model.md` explains the model in plain language. Key shapes:
 
-```ts
-type Range = { low: number; likely: number; high: number };   // sampled as PERT(low, likely, high)
+- `Range = { low, likely, high }`: every uncertain input, sampled as PERT.
+- `Assumption<T> = { id, label, value, source, sourceUrl?, asOf, why, confidence }`: every default in `src/data/`. `id` must appear in `docs/model.md` (test-enforced).
+- `ScenarioInput`: `v: 1`, id, name, `seed`, `audienceSize`, `totalBudget`, `pricing` (model, price, grossMargin, monthlyChurn), 1–4 `channels` (channel, budgetShare, overrides), `window` (startMonth, weeks), `funnel` (signupRate, activationRate, paidConversion).
+- `ModelAssumptions`: per-channel `{ costPerThousand, clickThroughRate, intentMultiplier, rampProfile }`, `seasonality: { cost, demand }` (12 monthly multipliers each), `marketCorrelation`. The engine takes these as an argument; defaults come from `defaultModelAssumptions()` in `src/data/modelDefaults.ts`.
+- `Dist = { p10, p50, p90, mean }`: raw percentiles. May hold `Infinity` (no customers → CAC; never pays back → payback). Show it via `toOutcomeRange(dist, metric)` → `{ downside, likely, upside }`.
+- `SimulationResult`: stages, dropOff, byChannel, weekly (cumulative paying + revenue), revenue, mrrAtEnd, cac, paybackMonths, `probPaybackWithin12`, `probNeverPayback`, histogram.
+- `SensitivityResult`: `baseline` + `bars` sorted by swing (`input`, `label`, `inputLow/High`, `metricAtLow/High`, `swing`).
+- `Insight` (M2, `src/insights/`): `{ headline, findings[] }`. Findings have a kind (winner, payback_risk, biggest_leak, top_driver, channel_mismatch) and a severity (info, good, warning, risk).
 
-// Every default in src/data/ is wrapped like this. The UI's AssumptionMarker reads source + asOf.
-type Assumption<T> = {
-  value: T;
-  source: string;            // short citation, e.g. "WordStream Google Ads benchmarks"
-  sourceUrl?: string;
-  asOf: string;              // 'YYYY-MM' the figure refers to
-  note?: string;             // why we adjusted it, if we did
-};
+### How one simulated launch works (summary of docs/model.md)
 
-type ChannelId =
-  | 'paid_search' | 'paid_social' | 'content_seo' | 'email'
-  | 'influencer' | 'community' | 'product_hunt' | 'partnerships';
+1. **Draw the world:** every uncertain input is drawn once per run from its PERT range. The three product rates share a "market response" draw (Gaussian copula, pairwise correlation 0.5).
+2. **Per week:** spend × ramp → impressions at that month's cost → **unique reach** = A(1 − e^(−I/A)) and **unique visitors** = A(1 − e^(−Σ impressions × CTR / A)). CTR is per impression, and a person visits at most once.
+3. **Funnel:** visitors × sign-up rate × channel intent × month's demand → activation → paying. These are binomial draws from sign-up on; reach and visits are expectations.
+4. **Economics:** revenue in the window, MRR at the end, CAC = spend ÷ paying, payback = ln(1 − CAC·c/g) ÷ ln(1 − c) with lifetime cap g/c (→ "never").
+5. **Aggregate:** 5,000 runs → P10/P50/P90. `expectedLaunch()` is the no-randomness, all-likely run used by the sanity test and sensitivity.
 
-type ChannelAssumptions = {
-  costPerThousand: Range;     // $ per 1,000 impressions (organic channels: effort cost)
-  clickThrough: Range;        // reach → visit
-  intentMultiplier: number;   // scales visit → sign-up (search > social)
-  rampProfile: 'flat' | 'spike' | 'build';  // how impact spreads across the window's weeks
-};
-
-type ScenarioInput = {
-  v: 1;
-  id: string;
-  name: string;
-  seed: number;
-  audienceSize: number;               // reachable people in the target market
-  totalBudget: number;                // USD for the whole launch window
-  pricing: {
-    model: 'subscription' | 'one_time';
-    price: number;                    // USD per month, or one-time
-    grossMargin: number;              // 0–1, default 0.8
-    monthlyChurn?: Range;             // subscription only
-  };
-  channels: Array<{                   // 1–4 items; shares sum to 1
-    channel: ChannelId;
-    budgetShare: number;
-    overrides?: Partial<ChannelAssumptions>;
-  }>;
-  window: { startMonth: 1|2|3|4|5|6|7|8|9|10|11|12; weeks: number };
-  funnel: { signupRate: Range; activationRate: Range; paidConversion: Range };
-};
-
-type Dist = { p10: number; p50: number; p90: number; mean: number };
-
-type SimulationResult = {
-  scenarioId: string;
-  runs: number;                                   // default 5,000
-  stages: Record<'reach'|'visit'|'signup'|'activation'|'paying', Dist>;
-  dropOff: Array<{ from: Stage; to: Stage; rate: Dist; lost: Dist }>;
-  byChannel: Record<ChannelId, { spend: number; paying: Dist; cac: Dist }>;
-  weekly: Array<{ week: number; paying: Dist; cumulativeRevenue: Dist }>;
-  revenue: Dist;                                  // revenue earned inside the window
-  mrrAtEnd: Dist;                                 // subscription only
-  cac: Dist;                                      // blended
-  paybackMonths: Dist;                            // capped at 36; UI shows "> 36 mo"
-  probPaybackWithin12: number;                    // 0–1
-  histogram: { metric: 'paying'; bins: Array<{ x0: number; x1: number; count: number }> };
-};
-
-type SensitivityResult = {
-  metric: 'paying' | 'revenue' | 'cac';
-  baseline: number;
-  bars: Array<{ input: string; label: string; lowValue: number; highValue: number; swing: number }>; // sorted by swing desc
-};
-
-type Insight = {
-  headline: string;                    // the one sentence shown above every results view
-  findings: Array<{
-    kind: 'winner' | 'payback_risk' | 'biggest_leak' | 'top_driver' | 'channel_mismatch';
-    scenarioId?: string;
-    severity: 'info' | 'good' | 'warning' | 'risk';
-    text: string;
-  }>;
-};
-```
-
-### How one simulation run works
-
-1. Draw every uncertain parameter **once per run** from PERT(low, likely, high). It stays fixed across weeks so the run is internally consistent.
-2. Per channel per week: spend = budget × share × ramp weight → impressions = spend / CPM × 1000 → **reach on a saturating curve** against the audience (diminishing returns, so doubling spend doesn't double reach). Overlap between channels is treated as independent.
-3. Apply the start month's seasonality multiplier to cost and conversion.
-4. Funnel: visits = reach × CTR; sign-ups = visits × signupRate × intent; activations; paying. Each step is a binomial draw, using a normal approximation when n > 1,000.
-5. Economics: revenue in the window, MRR at the end, CAC = spend / paying users (blended and per channel), payback = months until cumulative gross-margin revenue per customer (after churn) ≥ CAC.
-6. Repeat N runs and aggregate to P10/P50/P90.
-
-**Sensitivity (tornado):** for each uncertain input, plus budget, price and audience at ±20%, set it to its low and then its high while holding everything else at likely. Record the change in the target metric and sort by swing. The top bar is "the input that matters most", and the UI says it in a sentence.
-
+**Sensitivity (tornado):** swing each uncertain input between its own P10 and P90 (budget, price and audience ±20%) with everything else at likely, using expected-value runs, then sort by swing. `bars[0]` is "what matters most".
 ## Conventions
 
 - **TypeScript:** `strict` and `noUncheckedIndexedAccess`. No `any` and no non-null `!` unless there's a comment explaining why.
@@ -276,7 +209,7 @@ Think engineering lab equipment or a high-end measurement tool, not a SaaS templ
 - **Surfaces:** light = cool, slightly blue-tinted off-white; dark = deep slate. Both themes get equal care, and neither is a mechanical inversion of the other.
 - **Type:** a distinctive, sharp sans for headings (**not Inter, not Space Grotesk**), a readable sans for body, and monospace with tabular numbers for **all** figures.
 - **Color:** **one signal accent, used only for the key insight on each screen** (the winning scenario, the biggest drop-off, the top sensitivity bar). Separate semantic colors for good / warning / risk, which must not be confusable with the accent. Everything else is neutral.
-- **Charts as instrument readouts:** thin precise lines (1–1.5px), uncertainty bands for worst/likely/best, direct labels instead of legends where possible, a faint grid, tick marks.
+- **Charts as instrument readouts:** thin precise lines (1–1.5px), uncertainty bands for downside/likely/upside, direct labels instead of legends where possible, a faint grid, tick marks.
 - **Layout:** generous whitespace. Hierarchy comes from type scale and alignment, not cards and shadows.
 - **Token mechanics:** colors live in `src/design/palette.ts` and are mirrored as `light-dark()` custom properties in `globals.css`. `palette.test.ts` enforces the mirror and WCAG AA. Tailwind's default palette is removed, so only token utilities exist (`bg-surface`, `text-ink-muted`, `text-accent-ink`, …). Custom utilities: `display` (headings), `figures` (mono, tabular numbers), `label` (small uppercase instrument labels).
 - **Gotcha:** `light-dark()` and `var()` inside a custom property resolve on the element that *declares* it, and children inherit the resolved value. That's why tokens are re-declared on every `[data-theme]` element and why utilities read `--ff-*` directly rather than a `:root` alias.
@@ -294,9 +227,9 @@ Each milestone is deployed to the public Vercel URL, works on its own, and ends 
 
 - [x] **M0 – Foundation.** *(Shipped 2026-10-22, tag `m0`.)* Scaffold Next.js + TS strict, Tailwind v4, Biome, Vitest, pnpm scripts, public GitHub repo `launch-lab`, CI, Vercel deploy. `docs/product-brief.md` based on the user's brief (problem, personas Maya / Daniel / Noa, hypotheses H1–H5, north star, out of scope). Token skeleton with light/dark toggle. Design gate: 2 accent + font options shown to the user, choice applied (see Design system), and the page kept as `/style-guide`.
   *Ships:* a live URL with a styled landing page and theme toggle.
-- [ ] **M1 – Simulation engine.** `src/engine` complete per the data model: RNG, PERT, channels + saturation, seasonality, funnel, economics, Monte Carlo, aggregation. Sample data with every default wrapped as an `Assumption` (source + asOf). Full unit + property tests. `docs/model.md` lists every assumption with source and date.
+- [x] **M1 – Simulation engine.** *(Shipped 2026-10-22, tag `m1`.)* `src/engine` complete per the data model: RNG, PERT, channels + saturation, seasonality, funnel, economics, Monte Carlo with market response, sensitivity, aggregation. Sample data with every default wrapped as an `Assumption` (source, asOf, why). Hand-calculated sanity suite, property tests, purity test. `docs/model.md` covers every assumption with source, date, why, and how disagreements were resolved, plus limitations and a v2 roadmap. A temporary results table lives on `/lab`.
   *Ships:* a tested engine, plus a temporary results table on `/lab` for the sample scenario.
-- [ ] **M2 – Single-scenario lab.** Scenario editor (audience, budget, pricing, ≤ 4 channels with linked budget-split sliders, window), Web Worker + `useSimulation`, `src/insights/` with the single-scenario headline sentence **above** the KPI readouts (revenue, CAC, payback as worst/likely/best), funnel drop-off chart with the biggest leak highlighted, weekly timeline with uncertainty band. `AssumptionMarker` on every default-driven value. Mobile layout and both themes.
+- [ ] **M2 – Single-scenario lab.** Scenario editor (audience, budget, pricing, ≤ 4 channels with linked budget-split sliders, window), Web Worker + `useSimulation`, `src/insights/` with the single-scenario headline sentence **above** the KPI readouts (revenue, CAC, payback as downside/likely/upside), funnel drop-off chart with the biggest leak highlighted, weekly timeline with uncertainty band. `AssumptionMarker` on every default-driven value. Mobile layout and both themes.
   *Ships:* a useful single-scenario simulator that opens with sample data and leads with its takeaway.
 - [ ] **M3 – Sensitivity and insights.** Tornado chart with a switchable metric, led by a "what matters most" sentence. Outcome histogram, an assumptions drawer (view source/date and edit each benchmark), and a `/methodology` page.
   *Ships:* the "why" behind each number.
@@ -318,4 +251,9 @@ Record significant decisions here (one line each) and write an ADR in `docs/deci
 - 2026-10-22: Insight-first. Every results view opens with a computed headline sentence.
 - 2026-10-22: Design gate: Option A type + Option B ultramarine accent, made more saturated, on cooler-gray neutrals with classic semantics. Invariants are test-enforced.
 - 2026-10-22: Dropped `next-themes`. Theming uses the inline-script pattern from the Next 16.4 docs plus `light-dark()` tokens.
+- 2026-10-22: Labels are **downside / likely / upside** (P10 / P50 / P90), never worst/best. The direction rule lives in `engine/outcomes.ts`.
+- 2026-10-22: Shared market-response factor for the three product rates (correlation 0.5). No conversion lag in v1; it's on the v2 roadmap.
+- 2026-10-22: CTR is applied **per impression**, and a person visits at most once. Applying a per-impression benchmark per person counted diminishing returns twice; caught while building M1.
+- 2026-10-22: Sensitivity swings inputs between their P10 and P90, not their extremes.
+- 2026-10-22: Channel set narrowed to six with sourceable benchmarks. Sample price is $49 per team per month.
 - 2026-10-22: Cookieless product analytics in M5. Vercel Web Analytics custom events are Pro-only (checked 2026-10-22), so provider TBD.

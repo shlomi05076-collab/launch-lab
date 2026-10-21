@@ -5,8 +5,8 @@
 
 const WEEKS = 12;
 const likely = [0, 18, 41, 70, 102, 137, 171, 206, 240, 272, 303, 331];
-const worst = likely.map((v) => Math.round(v * 0.62));
-const best = likely.map((v) => Math.round(v * 1.45));
+const downside = likely.map((v) => Math.round(v * 0.62));
+const upside = likely.map((v) => Math.round(v * 1.45));
 
 const funnel = [
   { stage: "Reach → visit", rate: 0.065, kept: "11,260" },
@@ -20,9 +20,9 @@ const leakIndex = funnel.reduce(
 );
 
 const kpis = [
-  { label: "Paying users", worst: "205", likely: "331", best: "480" },
-  { label: "Blended CAC", worst: "$61", likely: "$38", best: "$26" },
-  { label: "Payback", worst: "7.4 mo", likely: "4.3 mo", best: "2.9 mo" },
+  { label: "Paying users", downside: "205", likely: "331", upside: "480" },
+  { label: "Blended CAC", downside: "$61", likely: "$38", upside: "$26" },
+  { label: "Payback", downside: "7.4 mo", likely: "4.3 mo", upside: "2.9 mo" },
 ];
 
 // Chart geometry (viewBox units).
@@ -34,7 +34,7 @@ const x = (week: number) => PAD.left + (week / (WEEKS - 1)) * (W - PAD.left - PA
 const y = (value: number) => PAD.top + (1 - value / Y_MAX) * (H - PAD.top - PAD.bottom);
 const line = (values: number[]) =>
   values.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-const band = `${line(best)} ${worst
+const band = `${line(upside)} ${downside
   .map((v, i) => [i, v] as const)
   .reverse()
   .map(([i, v]) => `L${x(i).toFixed(1)},${y(v).toFixed(1)}`)
@@ -59,14 +59,14 @@ export function LaunchReadout() {
             <dt className="label">{kpi.label}</dt>
             <dd className="figures text-2xl leading-none font-medium">{kpi.likely}</dd>
             <dd className="figures text-xs text-ink-muted">
-              <span className="sr-only">worst case </span>
-              {kpi.worst} <span aria-hidden="true">↔</span>
-              <span className="sr-only">best case</span> {kpi.best}
+              <span className="sr-only">downside </span>
+              {kpi.downside} <span aria-hidden="true">↔</span>
+              <span className="sr-only">upside</span> {kpi.upside}
             </dd>
           </div>
         ))}
       </dl>
-      <p className="label -mt-4">Large: likely · small: worst ↔ best</p>
+      <p className="label -mt-4">Large: likely · small: downside ↔ upside</p>
 
       <div>
         <div className="mb-2 flex items-baseline justify-between">
@@ -77,7 +77,7 @@ export function LaunchReadout() {
           viewBox={`0 0 ${W} ${H}`}
           className="h-auto w-full overflow-visible"
           role="img"
-          aria-label="Cumulative paying users over 12 weeks: likely 331, worst case 205, best case 480."
+          aria-label="Cumulative paying users over 12 weeks: likely 331, downside 205, upside 480."
         >
           {[0, 100, 200, 300, 400, 500].map((tick) => (
             <g key={tick}>
@@ -111,15 +111,15 @@ export function LaunchReadout() {
             />
           ))}
           <path d={band} className="fill-ink opacity-[0.07]" />
-          <path d={line(best)} className="fill-none stroke-ink-faint" strokeDasharray="2 3" />
-          <path d={line(worst)} className="fill-none stroke-ink-faint" strokeDasharray="2 3" />
+          <path d={line(upside)} className="fill-none stroke-ink-faint" strokeDasharray="2 3" />
+          <path d={line(downside)} className="fill-none stroke-ink-faint" strokeDasharray="2 3" />
           <path d={line(likely)} className="fill-none stroke-ink" strokeWidth={1.5} />
           <circle cx={x(last)} cy={y(likely[last] ?? 0)} r={3} className="fill-ink" />
           {(
             [
-              ["best", best[last]],
+              ["upside", upside[last]],
               ["likely", likely[last]],
-              ["worst", worst[last]],
+              ["downside", downside[last]],
             ] as const
           ).map(([name, value]) => (
             <text

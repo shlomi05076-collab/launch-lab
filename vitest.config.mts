@@ -10,7 +10,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      include: ["src/engine/**", "src/insights/**", "src/schema/**", "src/lib/**"],
+      include: ["src/engine/**", "src/insights/**", "src/schema/**", "src/data/**", "src/lib/**"],
       exclude: ["**/*.test.ts"],
     },
   },
