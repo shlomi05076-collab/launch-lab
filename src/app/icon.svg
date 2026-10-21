@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 22 22" fill="none">
+  <style>
+    .frame { fill: #f3f4f6; stroke: #12161d; }
+    .trace { stroke: #2f1cff; }
+    .dot { fill: #2f1cff; }
+    @media (prefers-color-scheme: dark) {
+      .frame { fill: #0f1114; stroke: #e7e9ec; }
+      .trace { stroke: #6466ff; }
+      .dot { fill: #6466ff; }
+    }
+  </style>
+  <rect class="frame" x="0.75" y="0.75" width="20.5" height="20.5" stroke-width="1.5"/>
+  <path class="trace" d="M4 15.5 L8.5 12 L12 13.5 L18 6" stroke-width="1.75"/>
+  <circle class="dot" cx="18" cy="6" r="1.6"/>
+</svg>

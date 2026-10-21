@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Values mirror src/design/palette.ts; palette.test.ts fails if they drift.
+ * Each token is light-dark(light, dark). Browsers resolve light-dark() on the element that
+ * DECLARES the custom property, and descendants inherit the resolved color. So tokens are
+ * re-declared on every [data-theme] element, which lets any subtree force a theme.
+ */
+:root,
+[data-theme] {
+  color-scheme: light dark;
+
+  --bg: light-dark(#f3f4f6, #0f1114);
+  --surface: light-dark(#fbfbfc, #15171b);
+  --inset: light-dark(#e8eaee, #1b1e23);
+  --ink: light-dark(#12161d, #e7e9ec);
+  --ink-muted: light-dark(#4b515d, #a4a9b2);
+  --ink-faint: light-dark(#7c828e, #6d727b);
+  --rule: light-dark(#d2d5db, #2a2d33);
+  --grid: light-dark(#e3e5e9, #1b1d21);
+  --good: light-dark(#17704a, #45c387);
+  --warning: light-dark(#8a5b00, #e0b43c);
+  --risk: light-dark(#c4243a, #ff6b6b);
+  --accent: light-dark(#2f1cff, #6466ff);
+  --accent-ink: light-dark(#2f1cff, #7a7cff);
+
+  /* Archivo's width axis: semi-expanded headings. */
+  --display-stretch: 112.5%;
+  --display-tracking: -0.015em;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Remove Tailwind's default palette so only tokens can be used. */
+@theme {
+  --color-*: initial;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-inset: var(--inset);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-grid: var(--grid);
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-risk: var(--risk);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-display: var(--ff-display), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--ff-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--ff-mono), ui-monospace, monospace;
+}
+
+/*
+ * Custom utilities read --ff-* (set by next/font classes) directly, never a :root alias,
+ * so a subtree with another font trio's classes picks up its fonts.
+ */
+
+/* Headings: the display face, with per-option width and tracking. */
+@utility display {
+  font-family: var(--ff-display), ui-sans-serif, system-ui, sans-serif;
+  font-stretch: var(--display-stretch, 100%);
+  letter-spacing: var(--display-tracking, -0.01em);
+  font-weight: 600;
+  line-height: 1.05;
+}
+
+/* All figures: monospace with tabular, slashed-zero numerals so columns align. */
+@utility figures {
+  font-family: var(--ff-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings:
+    "tnum" 1,
+    "zero" 1;
+}
+
+/* Small uppercase instrument labels. */
+@utility label {
+  font-family: var(--ff-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body,
+  [data-theme] {
+    font-family: var(--ff-body), ui-sans-serif, system-ui, sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 28%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
