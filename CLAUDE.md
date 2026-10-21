@@ -9,7 +9,11 @@ This is a portfolio project for **product manager and product marketing** roles.
 
 ## Status
 
-Current milestone: **M0 – Foundation** (see [Milestones](#milestones)). Update this line when a milestone ships.
+Current milestone: **M1 – Simulation engine** (see [Milestones](#milestones)). Update this line when a milestone ships.
+
+- **Live:** https://launch-lab-phi.vercel.app (Vercel Hobby, auto-deploys every push to `main`)
+- **Repo:** https://github.com/shlomi05076-collab/launch-lab (public). Commits use the noreply email set in the repo-local git config. Keep it that way.
+- When a milestone ships, update: this line, the milestone checkbox, `site.milestone` in `src/lib/site.ts`, and the README roadmap table.
 
 ## Product decisions (settled; don't revisit without asking)
 
@@ -288,7 +292,7 @@ Think engineering lab equipment or a high-end measurement tool, not a SaaS templ
 
 Each milestone is deployed to the public Vercel URL, works on its own, and ends with a milestone commit + tag pushed to GitHub (`launch-lab`).
 
-- [ ] **M0 – Foundation.** Scaffold Next.js + TS strict, Tailwind v4, Biome, Vitest, pnpm scripts, public GitHub repo `launch-lab`, CI, Vercel deploy. `docs/product-brief.md` based on the user's brief (problem, personas Maya / Daniel / Noa, hypotheses H1–H5, north star, out of scope). Token skeleton with light/dark toggle. Design gate: 2 accent + font options shown to the user, choice applied (see Design system), and the page kept as `/style-guide`.
+- [x] **M0 – Foundation.** *(Shipped 2026-10-22, tag `m0`.)* Scaffold Next.js + TS strict, Tailwind v4, Biome, Vitest, pnpm scripts, public GitHub repo `launch-lab`, CI, Vercel deploy. `docs/product-brief.md` based on the user's brief (problem, personas Maya / Daniel / Noa, hypotheses H1–H5, north star, out of scope). Token skeleton with light/dark toggle. Design gate: 2 accent + font options shown to the user, choice applied (see Design system), and the page kept as `/style-guide`.
   *Ships:* a live URL with a styled landing page and theme toggle.
 - [ ] **M1 – Simulation engine.** `src/engine` complete per the data model: RNG, PERT, channels + saturation, seasonality, funnel, economics, Monte Carlo, aggregation. Sample data with every default wrapped as an `Assumption` (source + asOf). Full unit + property tests. `docs/model.md` lists every assumption with source and date.
   *Ships:* a tested engine, plus a temporary results table on `/lab` for the sample scenario.

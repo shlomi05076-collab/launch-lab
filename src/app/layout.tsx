@@ -8,8 +8,16 @@ import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(site.url),
   title: { default: `${site.name}: ${site.tagline}`, template: `%s · ${site.name}` },
   description: site.description,
+  openGraph: {
+    type: "website",
+    siteName: site.name,
+    title: `${site.name}: ${site.tagline}`,
+    description: site.description,
+    url: "/",
+  },
 };
 
 export const viewport: Viewport = {
