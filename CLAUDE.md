@@ -1,15 +1,22 @@
 # Launch Lab
 
-Simulate a product launch before spending money. Product marketing managers and founders enter an audience size, a price, up to 4 marketing channels with a budget split, and a launch window. A Monte Carlo simulation moves buyers through the funnel (reach → visit → sign-up → activation → paying) and returns **ranges, not one falsely precise number**. Users compare up to 3 scenarios side by side and share a report link.
+Launch Lab helps **anyone with a product idea** answer **"Can my idea work, and what would have to be true?"** before spending money on it.
+- **Test my idea (main entry point):** a guided, jargon-free check for first-time founders. It asks 7 plain questions and answers with a viability explanation, never a verdict.
+- **Expert mode:** the full lab, for marketers and founders who know their numbers.
 
-This is a portfolio project for **product manager and product marketing** roles. Hiring managers will read the live app, the README and the code. Optimise for three things, in this order:
+Underneath both, a Monte Carlo simulation moves buyers through the funnel (reach → visit → sign-up → activation → paying) and returns **ranges, not one falsely precise number**. Scenarios are saved in the browser, can be compared (up to 3), and can be shared by link.
+
+This is a portfolio project for **product manager and product marketing** roles. Hiring managers will read the live app, the README and the code. Optimise for four things, in this order:
 1. **A model you can defend.** Every number on screen can be explained in one sentence and traced to an input or a documented assumption.
-2. **Clear product thinking.** Show the insight ("Paid social is 61% of your spend but 22% of your paying users"), not just the data.
-3. **Craft.** The UI looks like a precision instrument, and the code is small, typed and tested.
+2. **Clear product thinking.** Show the insight and what it depends on ("you'd need 1 in 25 visitors to sign up; similar apps get 1 in 40"), not just the data.
+3. **Plain language for non-experts.** The primary user has never heard of CAC. If a first-time founder can't follow it, it isn't done.
+4. **Craft.** The UI looks like a precision instrument, and the code is small, typed and tested.
+
+The primary persona is **Omer, 27**: he has an idea and some savings and has never run marketing. The secondary personas are Maya (PMM), Daniel (founder-PM) and Noa (growth lead). See `docs/product-brief.md`. The guided flow is specified in `docs/test-my-idea.md`.
 
 ## Status
 
-Current milestone: **M2 – Single-scenario lab** (see [Milestones](#milestones)). Update this line when a milestone ships.
+Current milestone: **M2 – Product types and viability math** (repositioned plan approved 2026-10-22; see [Milestones](#milestones)). Update this line when a milestone ships.
 
 - **Live:** https://launch-lab-phi.vercel.app (Vercel Hobby, auto-deploys every push to `main`)
 - **Repo:** https://github.com/shlomi05076-collab/launch-lab (public). Commits use the noreply email set in the repo-local git config. Keep it that way.
@@ -21,12 +28,23 @@ Current milestone: **M2 – Single-scenario lab** (see [Milestones](#milestones)
 - **Launch window** = start month + length in weeks (2–26). The start month sets a seasonality multiplier, and results are produced week by week.
 - **Share links** carry the scenario inputs in the URL: versioned and compressed. There is no backend and no database. Results are reproducible because each scenario carries its own random seed.
 - **Uncertainty language:** **Downside (P10) / Likely (P50) / Upside (P90)**, everywhere: UI, docs, code, copy. **Never "worst/best"**, because P10 is not the worst case: 10% of simulated launches did worse than the downside. For costs (CAC, payback), downside is the P90 because higher is worse. Always map through `toOutcomeRange()` in `engine/outcomes.ts`, never by hand.
-- **First load** shows a sample product (Briefly, AI meeting notes for small teams, $49 per team per month) with 3 ready-made scenarios: *High-intent search*, *Social push* and *Balanced mix* (`src/data/sampleScenarios.ts`). They share budget, audience, window and funnel, so only the channel mix differs. A first-time visitor never sees an empty state.
+- **Two modes, one engine.** "Test my idea" (`/idea`) is the main entry point and the landing page's primary call to action. Expert mode (`/lab`) has every input, custom channels and scenario comparison. Both produce a `ScenarioInput`, and "Open in expert mode" carries guided answers over.
+- **"See an example"** opens the sample product (Briefly, AI meeting notes for small teams, $49 per team per month) with 3 ready-made scenarios: *High-intent search*, *Social push* and *Balanced mix* (`src/data/sampleScenarios.ts`). They share budget, audience, window and funnel, so only the channel mix differs. A first-time visitor never sees an empty state.
+- **Product types** have sourced defaults: B2B software, consumer app (subscription), online store (one-time), digital product or course, service or agency. They're shown as plain choices ("An app people pay for monthly"). Every "not sure" answer uses the type's sourced default and says so in the result. A few values have no benchmark (audience-size bands, the example $5,000 budget); they're labeled as an estimate or example, never as a benchmark.
+- **Viability, never a verdict.** Results explain what would have to be true and never claim an idea will succeed or fail. Banned in generated copy (test-enforced in `src/insights/`): "viable", "not viable", "will succeed", "will fail", "guaranteed", "you should invest", and pass/fail scores.
+- **Break-even** = the customers won during the launch earn back the **marketing spend** from gross margin within **12 months**. It excludes the cost of building and running the product, and the results say so. "What would have to be true" solves, one input at a time with the rest at typical values, for the value that makes the *likely* customer count reach break-even. It then compares that value with the product type's range: **Typical** / **Needs above-typical results** / **Rarely seen**. Labels describe the requirement, never the idea, and a required value is never phrased as good news. The results tile reads "Chance to earn back the spend within a year", never "chance of success". For one-time products, customer value includes **purchases per customer in the first year** (sourced per product type).
+- **Disclaimer on every result** (guided, expert, comparison, shared report), right under the headline: "A planning simulation based on industry averages, not a prediction or financial advice."
+- **Provenance labels:** a default shows an **assumption** marker (source, date). A value the user typed in expert mode shows **"your data"**. Never mix the two.
+- **Saved scenarios** live in the browser only (Zustand persisted to localStorage): rename, duplicate, delete. No account, no backend. Share links remain URL-encoded.
 - **Channels (v1):** paid search, paid social (Meta), LinkedIn ads, newsletter sponsorships, creators/influencers, content & SEO. Community, Product Hunt and partnerships were dropped because no credible benchmarks exist to source their defaults.
 - **Every default is a labeled assumption.** Each default value in `src/data/` (CPMs, click-through rates, conversion rates, churn, seasonality) is an `Assumption` record with a source and an as-of date. Each is documented in `docs/model.md` and shown in the UI with an "assumption" marker whose tooltip gives the source and date. Users can edit any of them. No unlabeled magic numbers.
-- **Insight first.** Every results view (single scenario, sensitivity, comparison, shared report) leads with **one plain-English sentence** with the key takeaway, *before* any chart. Example: "Balanced pays back in 7 months; Paid-heavy reaches more users but has a 40% chance of never paying back." The sentence comes from the results by tested, pure code in `src/insights/`. It is never hand-written per screen.
-- **Product analytics** are privacy-friendly: no cookies and no personal data. They track the core funnel (lab opened → first simulation run → scenario edited → scenarios compared → report shared → report opened). Events are documented in `docs/metrics.md` and implemented in M5. The north star is **scenarios compared per active user per week**.
-- **Out of scope for v1:** real ad-account integrations, multi-product or multi-market launches, team accounts. Push back on scope creep toward these.
+- **Insight first.** Every results view (single scenario, sensitivity, comparison, shared report) leads with **one plain-English sentence** with the key takeaway, *before* any chart. Guided example: "With $10,000 you'd likely get 40–110 customers. To earn that back within a year you'd need about 1 in 25 visitors to sign up; similar products usually get 1 in 40." Expert example: "Balanced pays back in 7 months; Social push reaches more people but has a 40% chance of never paying back." The sentence comes from the results by tested, pure code in `src/insights/`. It is never hand-written per screen.
+- **Product analytics** are privacy-friendly: no cookies and no personal data. They track two funnels:
+  - **Guided:** idea started → idea completed → "what would have to be true" viewed → saved, expert opened or shared.
+  - **Expert:** lab opened → first simulation run → scenario edited → scenarios compared → report shared → report opened.
+
+  Events are documented in `docs/metrics.md` and implemented in M6. **North star (approved 2026-10-22):** ideas checked per week (guided checks that reach the "what would have to be true" view). The expert metric is scenarios compared per active user per week.
+- **Out of scope for v1:** pass/fail verdicts or "viability scores", financial or investment advice, real ad-account integrations, multi-product or multi-market launches, accounts or cloud-saved workspaces. Push back on scope creep toward these.
 
 ## Stack
 
@@ -87,10 +105,10 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
 2. **Determinism.** Same `ScenarioInput` + `seed` gives byte-identical `SimulationResult`. All randomness goes through `engine/rng.ts`.
 3. **Validate at the edges, trust inside.** Zod parses every input that enters the app (form, URL, localStorage). The engine assumes valid input.
 4. **Versioned schema.** `ScenarioInput` has a schema version `v`. Any change to its shape bumps `v` and adds a migration in `schema/migrations.ts`, so old share links keep working forever.
-5. **Sources of truth.** On `/lab`, the Zustand store is the source of truth (persisted). On `/report`, the URL is the source of truth (read-only).
+5. **Sources of truth.** On `/idea` and `/lab`, the Zustand store is the source of truth: the guided draft, saved scenarios and the active scenario, persisted to localStorage and validated by Zod on load. On `/report`, the URL is the source of truth (read-only).
 6. **Simulation never blocks the main thread.** The UI calls `useSimulation()`, which talks to `workers/simulation.worker.ts`. Inputs are debounced (~250 ms) and stale runs are cancelled.
 7. **Format at the edge.** The engine returns raw numbers: money in whole USD, rates as 0–1 fractions. Only `lib/format.ts` turns them into strings.
-8. **Insights are computed, not written.** `src/insights/` is pure (same rules as the engine). It turns `SimulationResult`s into structured findings plus one headline sentence. Findings rank by decision impact, so the headline answers "which plan, and what's the risk?".
+8. **Insights are computed, not written.** `src/insights/` is pure (same rules as the engine). It turns `SimulationResult`s and `Viability` results into structured findings plus one headline sentence. Findings rank by decision impact. The guided headline answers "what would have to be true?"; the expert headline answers "which plan, and what's the risk?". Generated copy must pass the banned-verdict-words test.
 9. **Analytics go through one wrapper.** Components call `track(event, props)` from `lib/analytics.ts` and never a vendor SDK directly. Event names and props are a typed union that matches `docs/metrics.md`. No personal data, no scenario contents, no cookies.
 
 ## Folder structure
@@ -101,6 +119,7 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
 ├─ README.md                    # product case study: problem, users, decisions, trade-offs, screenshots
 ├─ docs/
 │  ├─ product-brief.md          # problem, personas, hypotheses, north star, scope
+│  ├─ test-my-idea.md           # guided flow spec: questions, defaults, results layout, edge cases
 │  ├─ model.md                  # how the simulation works; every assumption with source + date
 │  ├─ metrics.md                # analytics events, properties, funnel, north star definition
 │  └─ decisions/                # short ADRs (001-url-state.md, 002-pert-distributions.md, …)
@@ -110,8 +129,9 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
    ├─ app/
    │  ├─ layout.tsx             # fonts, theme provider, metadata
    │  ├─ globals.css            # design tokens (light + dark) and Tailwind @theme
-   │  ├─ page.tsx               # landing: one-line pitch → opens /lab with sample data
-   │  ├─ lab/page.tsx           # editor + results + compare workspace
+   │  ├─ page.tsx               # landing: "Test my idea" (primary) · "See an example" (Briefly)
+   │  ├─ idea/page.tsx          # guided "Test my idea" flow + viability results
+   │  ├─ lab/page.tsx           # expert mode: full editor + results + compare workspace
    │  ├─ report/page.tsx        # read-only shared report (?s=<encoded>)
    │  ├─ report/opengraph-image.tsx  # dynamic share preview card
    │  └─ methodology/page.tsx   # human-readable version of docs/model.md
@@ -126,12 +146,13 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
    │  ├─ economics.ts           # CAC, payback (with lifetime cap), weekly retention
    │  ├─ monteCarlo.ts          # parameter draws (+ market response), run loop, aggregation
    │  ├─ sensitivity.ts         # tornado analysis (P10/P90 swings, expected-value runs)
+   │  ├─ viability.ts           # break-even, customers needed, "what would have to be true" solver
    │  ├─ outcomes.ts            # downside/likely/upside direction rule
    │  ├─ stats.ts               # percentiles, histograms
    │  ├─ sanity.test.ts         # the hand-calculated worked example from docs/model.md
    │  ├─ properties.test.ts     # fast-check invariants on random scenarios
    │  └─ *.test.ts              # other colocated tests
-   ├─ insights/                 # PURE. results → ranked findings + headline sentence (+ tests)
+   ├─ insights/                 # PURE. results → findings + headline sentence; cheapTests.ts (+ tests)
    ├─ design/
    │  ├─ palette.ts             # color values per theme; mirrored in globals.css (test-enforced)
    │  └─ fonts.ts               # next/font setup; each trio sets --ff-display/--ff-body/--ff-mono
@@ -139,24 +160,27 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
    │  ├─ assumption.ts          # Assumption<T>: value, source, asOf, why, confidence
    │  ├─ channelBenchmarks.ts   # per-channel CPM, CTR, intent, ramp
    │  ├─ modelDefaults.ts       # seasonality, market correlation, funnel, churn, margin
-   │  └─ sampleScenarios.ts     # Briefly + 3 scenarios
+   │  ├─ productTypes.ts        # 5 product-type templates: funnel, price, churn, channel profile, starter mix
+   │  └─ sampleScenarios.ts     # Briefly + 3 scenarios ("See an example")
    ├─ schema/
    │  ├─ scenario.ts            # Zod schemas (inputs to the engine)
    │  ├─ migrations.ts
    │  └─ share.ts               # encode/decode share URL
    ├─ workers/simulation.worker.ts
    ├─ hooks/useSimulation.ts
-   ├─ store/scenarios.ts        # Zustand: up to 3 scenarios, active id
+   ├─ store/scenarios.ts        # Zustand: guided draft, saved scenarios (rename/duplicate/delete), compare set
    ├─ components/
    │  ├─ layout/                # SiteHeader, SiteFooter
-   │  ├─ ui/                    # Button, NumberField, Slider, Segmented, Tooltip, ThemeToggle, AssumptionMarker
+   │  ├─ ui/                    # Button, NumberField, Slider, Segmented, Tooltip, ThemeToggle, AssumptionMarker, Disclaimer
+   │  ├─ idea/                  # QuestionStep, AnswerSummary, ViabilityHeadline, BreakEvenGauge, MustBeTrue, Glossary
    │  ├─ charts/                # FunnelChart, RangeBar, TornadoChart, Timeline, Histogram
    │  ├─ scenario/              # ScenarioEditor, ChannelMix, PricingInput, WindowInput
    │  ├─ results/               # InsightHeadline, KpiReadout, DropOffPanel
    │  ├─ compare/               # CompareGrid, WinnerCallout
    │  └─ report/                # ReportView, ShareButton
    └─ lib/
-      ├─ format.ts              # currency, compact numbers, ranges ("$41k–$68k")
+      ├─ format.ts              # currency, compact numbers, ranges ("$41k–$68k"), "1 in 25"
+      ├─ glossary.ts            # one-line plain explanations for CAC, churn, conversion, …
       ├─ analytics.ts           # typed track() wrapper, the only place a vendor SDK is imported
       ├─ color.ts               # WCAG contrast + OKLCH helpers (palette tests, style guide)
       ├─ theme.ts               # theme preference type, storage key, inline init script
@@ -175,7 +199,13 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
 - `Dist = { p10, p50, p90, mean }`: raw percentiles. May hold `Infinity` (no customers → CAC; never pays back → payback). Show it via `toOutcomeRange(dist, metric)` → `{ downside, likely, upside }`.
 - `SimulationResult`: stages, dropOff, byChannel, weekly (cumulative paying + revenue), revenue, mrrAtEnd, cac, paybackMonths, `probPaybackWithin12`, `probNeverPayback`, histogram.
 - `SensitivityResult`: `baseline` + `bars` sorted by swing (`input`, `label`, `inputLow/High`, `metricAtLow/High`, `swing`).
-- `Insight` (M2, `src/insights/`): `{ headline, findings[] }`. Findings have a kind (winner, payback_risk, biggest_leak, top_driver, channel_mismatch) and a severity (info, good, warning, risk).
+- `Insight` (`src/insights/`): `{ headline, findings[] }`. Findings have a kind (winner, payback_risk, biggest_leak, top_driver, channel_mismatch, break_even, must_be_true) and a severity (info, good, warning, risk).
+- **Planned for M2** (no share links exist yet, so `v: 1` can still change; from M6 on, any change bumps `v` with a migration):
+  - `ScenarioInput.productType`: one of `b2b_software | consumer_app | online_store | digital_product | service`. It selects the channel profile (business or consumer costs and click rates) and the defaults, so a share link reproduces the same assumptions.
+  - `ScenarioInput.provenance`: which values came from defaults versus the user ("your data").
+  - Custom channels: a channel entry may carry its own full `ChannelAssumptions` (user-named, no benchmark), always labeled "your data".
+  - `Viability` (`engine/viability.ts`): `{ breakEvenCustomers, customerValue12m, likelyCustomers: OutcomeRange, probBreakEven12m, mustBeTrue: Array<{ input, label, typical: Range, current, needed, status: 'typical' | 'above_typical' | 'rare'; reachable: boolean }> }`.
+  - `ScenarioInput.pricing.purchasesPerYear` (one-time only): expected purchases per customer in their first year, sourced per product type.
 
 ### How one simulated launch works (summary of docs/model.md)
 
@@ -197,7 +227,13 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
 - **Accessibility:** WCAG 2.2 AA contrast in **both** themes, full keyboard operation, `prefers-reduced-motion` respected, touch targets ≥ 44px.
 - **Mobile:** design at 375px first. Compare view becomes swipeable columns or a stacked list. No horizontal page scroll.
 - **Copy:** plain language, sentence case, numbers in mono with tabular figures. Say "likely", not "P50", in primary UI. Write insights as sentences.
-- **Insight headline:** one sentence of at most ~30 words. It names the scenario and the number and states the risk in odds ("a 40% chance of never paying back"). No hedging filler and no chart jargon.
+- **Guided-mode copy (`/idea`):**
+  - **Questions:** no jargon (CAC, churn, conversion, funnel, CPM, CTR, LTV).
+  - **Results:** a term may appear only with its one-line explanation from `lib/glossary.ts`.
+  - **Formatting:** rates as "1 in 25", not "4%"; money rounded ("about $5,000").
+  - **Wording:** conditional ("you'd need", "if rates like similar products' hold"), never a verdict.
+  - **"Not sure":** every "not sure" default is visibly labeled in the result.
+- **Insight headline:** one sentence of at most ~30 words (guided headlines may run to ~40 because they carry the "what would have to be true" clause). It names the scenario and the number and states the risk in odds ("a 40% chance of never paying back"). No hedging filler and no chart jargon.
 - **Assumptions:** never add a default number to `src/data/` without an `Assumption` wrapper, a `docs/model.md` entry with source and date, and an `AssumptionMarker` wherever it's shown.
 - **Dependencies:** add one only if it clearly earns its weight. Note why in the commit message.
 - **Git:** Conventional Commits (`feat(engine): …`, `fix(ui): …`), small commits during work. **Every milestone ends with a clear milestone commit (e.g. `feat: M1 simulation engine`), a git tag (`m1`, …), and a push to the public GitHub repo `launch-lab`**, followed by the Vercel deploy and a README update.
@@ -229,24 +265,58 @@ Each milestone is deployed to the public Vercel URL, works on its own, and ends 
   *Ships:* a live URL with a styled landing page and theme toggle.
 - [x] **M1 – Simulation engine.** *(Shipped 2026-10-22, tag `m1`.)* `src/engine` complete per the data model: RNG, PERT, channels + saturation, seasonality, funnel, economics, Monte Carlo with market response, sensitivity, aggregation. Sample data with every default wrapped as an `Assumption` (source, asOf, why). Hand-calculated sanity suite, property tests, purity test. `docs/model.md` covers every assumption with source, date, why, and how disagreements were resolved, plus limitations and a v2 roadmap. A temporary results table lives on `/lab`.
   *Ships:* a tested engine, plus a temporary results table on `/lab` for the sample scenario.
-- [ ] **M2 – Single-scenario lab.** Scenario editor (audience, budget, pricing, ≤ 4 channels with linked budget-split sliders, window), Web Worker + `useSimulation`, `src/insights/` with the single-scenario headline sentence **above** the KPI readouts (revenue, CAC, payback as downside/likely/upside), funnel drop-off chart with the biggest leak highlighted, weekly timeline with uncertainty band. `AssumptionMarker` on every default-driven value. Mobile layout and both themes.
-  *Ships:* a useful single-scenario simulator that opens with sample data and leads with its takeaway.
-- [ ] **M3 – Sensitivity and insights.** Tornado chart with a switchable metric, led by a "what matters most" sentence. Outcome histogram, an assumptions drawer (view source/date and edit each benchmark), and a `/methodology` page.
-  *Ships:* the "why" behind each number.
-- [ ] **M4 – Compare scenarios.** Up to 3 scenarios: add, duplicate, rename, delete. A comparison headline sentence (winner + main risk) above a side-by-side grid with aligned scales, a winner callout (accent) per metric, and deltas vs baseline. All 3 sample scenarios load on first visit.
-  *Ships:* the full core workflow.
-- [ ] **M5 – Shareable report + analytics.** URL encode/decode with schema version + migrations, read-only `/report` page (headline sentence first, single scenario or comparison), copy-link button, dynamic OG image (the image shows the headline), print stylesheet. Malformed links show a friendly error and never crash. Cookieless analytics via `lib/analytics.ts`: page views, plus events `lab_opened`, `first_simulation_run`, `scenario_edited`, `scenarios_compared`, `report_shared`, `report_opened`. `docs/metrics.md` covers each event, its properties, the funnel, and how the north star is computed. Resolve the provider decision first (see Stack).
-  *Ships:* links that look good when pasted into Slack or LinkedIn, plus a measurable activation funnel.
-- [ ] **M6 – Polish and launch.** Playwright smoke suite (desktop + mobile), accessibility pass, Lighthouse ≥ 95 on all four categories, loading/empty/error states, micro-interactions (respecting reduced motion), README rewritten as a product case study with screenshots and a GIF, final ADRs.
-  *Ships:* the portfolio-ready v1.
+
+*Repositioned 2026-10-22 before M2: "Test my idea" is now the main entry point, and the old single-scenario lab became expert mode (M4). Old M3 (sensitivity) is split: the "matters most" sentence ships in M3 and the tornado chart in M4.*
+
+- [ ] **M2 – Product types and viability math.** Engine, data and insights, with no new UI.
+  - Five product-type templates in `src/data/productTypes.ts` (funnel, typical price, churn, channel profile, starter channel mix), each value sourced, dated and documented in `docs/model.md`.
+  - Consumer channel profile (CPM and click rates) alongside the existing business one. `productType` on `ScenarioInput`.
+  - `engine/viability.ts`: customer value over 12 months, customers needed to break even, chance of breaking even within 12 months, and the "what would have to be true" solver (bisection on expected-value runs) with Typical / Better than typical / Rarely seen / Not enough on its own.
+  - `purchasesPerYear` for one-time pricing in the engine (revenue and break-even).
+  - Hand-calculated break-even sanity test.
+  - `src/insights/` viability headline (three variants) plus the banned-verdict-words test.
+  - `lib/glossary.ts`, and "1 in N" formatting.
+  - *Ships:* `/lab` readout showing, for each product type's example, the viability sentence and the "what would have to be true" table.
+- [ ] **M3 – "Test my idea" guided flow.** Per `docs/test-my-idea.md`.
+  - Landing page with **Test my idea** (primary) and **See an example** (Briefly).
+  - 7 plain questions with "not sure" everywhere (including the "businesses or people?" follow-up and purchases per year for one-time products), and an answer summary.
+  - Results screen: headline, disclaimer, three numbers (including "Chance to earn back the spend within a year"), break-even gauge, "what would have to be true" with the "matters most" accent, **"How to test this cheaply"**, plain drop-off, glossary, actions.
+  - Cheap tests come from `src/insights/cheapTests.ts`: one template per main assumption (sign-up rate, paid conversion, price, cost per click), with a budget ≤ 10% of the plan and a pass mark from the break-even value (spec in `docs/test-my-idea.md`).
+  - Web Worker + `useSimulation`; guided draft autosaved in the browser.
+  - Short "How this works" page; mobile-first and both themes.
+  - *Ships:* the product's main experience, usable by someone who has never heard of CAC.
+- [ ] **M4 – Expert mode.** The full lab at `/lab`.
+  - Every input, linked budget-split sliders, custom channels, overriding any default ("your data" vs assumption markers), and "Open in expert mode" from guided results.
+  - Results: headline + disclaimer, KPIs (downside / likely / upside), funnel drop-off chart, weekly timeline with uncertainty band, tornado chart with switchable metric, outcome histogram.
+  - Assumptions drawer (source and date for every benchmark), full `/methodology` page.
+  - *Ships:* everything Maya, Daniel and Noa need for one scenario.
+- [ ] **M5 – Saved scenarios and comparison.**
+  - Browser-saved scenarios shared by both modes: save, rename, duplicate, delete, plus a "My ideas" list.
+  - Compare up to 3, with a comparison headline (winner + main risk), aligned scales, an accent callout for the winner per metric, and deltas against a baseline.
+  - The Briefly example loads as three comparable scenarios.
+  - *Ships:* the full core workflow, still with no account.
+- [ ] **M6 – Shareable report + analytics.**
+  - URL encode/decode with schema version + migrations (ADR 001).
+  - Read-only `/report` for a guided result, an expert scenario or a comparison: headline and disclaimer first.
+  - Copy-link button, dynamic OG image showing the headline, print stylesheet. Malformed links show a friendly error and never crash.
+  - Cookieless analytics via `lib/analytics.ts` covering both funnels (guided: `idea_started`, `idea_completed`, `must_be_true_viewed`, `idea_saved`, `expert_opened`; expert: `lab_opened`, `first_simulation_run`, `scenario_edited`, `scenarios_compared`; shared: `report_shared`, `report_opened`).
+  - `docs/metrics.md` with the north star. Resolve the analytics provider decision first (see Stack).
+  - *Ships:* links that look good in Slack or LinkedIn, and a measurable funnel.
+- [ ] **M7 – Polish and launch.**
+  - Playwright smoke suite (guided flow, expert mode, share; desktop + mobile).
+  - Accessibility pass; Lighthouse ≥ 95 on all four categories.
+  - Loading, empty and error states; micro-interactions (respecting reduced motion).
+  - 3–5 first-time-founder hallway tests of the guided flow (H6), with findings written up.
+  - README rewritten as a product case study with screenshots and a GIF; final ADRs.
+  - *Ships:* the portfolio-ready v1.
 
 ## Decision log
 
 Record significant decisions here (one line each) and write an ADR in `docs/decisions/` for the bigger ones.
 
-- 2026-10-22: Share via URL-encoded state, no database (ADR 001, to write in M5).
+- 2026-10-22: Share via URL-encoded state, no database (ADR 001, to write in M6).
 - 2026-10-22: Subscription pricing by default with a one-time option; window = start month + weeks.
-- 2026-10-22: PERT distributions for user-facing ranges, because PMs think in low/likely/high (ADR 002, to write in M1).
+- 2026-10-22: PERT distributions for user-facing ranges, because PMs think in low/likely/high (ADR 002).
 - 2026-10-22: Every default is an `Assumption` with source + date, shown in the UI via `AssumptionMarker`.
 - 2026-10-22: Insight-first. Every results view opens with a computed headline sentence.
 - 2026-10-22: Design gate: Option A type + Option B ultramarine accent, made more saturated, on cooler-gray neutrals with classic semantics. Invariants are test-enforced.
@@ -257,3 +327,4 @@ Record significant decisions here (one line each) and write an ADR in `docs/deci
 - 2026-10-22: Sensitivity swings inputs between their P10 and P90, not their extremes.
 - 2026-10-22: Channel set narrowed to six with sourceable benchmarks. Sample price is $49 per team per month.
 - 2026-10-22: Cookieless product analytics in M5. Vercel Web Analytics custom events are Pro-only (checked 2026-10-22), so provider TBD.
+- 2026-10-22: **Repositioned for anyone with a product idea.** New primary persona Omer (first-time founder, no marketing or finance background) and hypothesis H6 (explaining what must be true beats a pass/fail verdict). Guided "Test my idea" flow is the main entry point; the full lab becomes expert mode. Product-type templates with sourced defaults, browser-saved scenarios, and a disclaimer on every result. Milestones re-planned as M2–M7.

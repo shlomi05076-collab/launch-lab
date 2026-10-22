@@ -2,17 +2,17 @@
 
 **Rehearse your launch before you pay for it.**
 
-Launch Lab lets product marketers and founders simulate a product launch before spending money. Enter an audience, a price, up to four channels with a budget split, and a launch window. A Monte Carlo simulation moves buyers from reach to paying user and returns **downside / likely / upside** outcomes for revenue, CAC and payback, not one falsely precise number. Compare up to three plans side by side, see which assumption matters most, and share the reasoning with a link.
+Launch Lab helps anyone with a product idea answer **"Can my idea work, and what would have to be true?"** before spending money on it. First-time founders answer seven plain questions and get a viability explanation, not a verdict: the customers their budget would likely buy, how many they would need to earn the spend back, and which assumption their idea depends on most, compared with what similar products usually achieve. Marketers and founders who know their numbers get expert mode: every input, a Monte Carlo simulation with **downside / likely / upside** outcomes for revenue, CAC and payback, sensitivity analysis, and side-by-side comparison.
 
 **Live:** [launch-lab-phi.vercel.app](https://launch-lab-phi.vercel.app) · **Style guide:** [/style-guide](https://launch-lab-phi.vercel.app/style-guide)
 
-> **Status: in development. M1 shipped (simulation engine); building M2 (interactive lab).** This README becomes a full product case study at M6.
+> **Status: in development. M1 shipped (simulation engine); repositioned for first-time founders; building M2 (product types and viability math).** This README becomes a full product case study at M7.
 
 **How the model works:** [docs/model.md](docs/model.md) explains it in plain language, with a hand-checkable worked example and every assumption's source, date and reasoning. The [engine readout](https://launch-lab-phi.vercel.app/lab) shows its first results.
 
 ## Why
 
-Launch plans are committed before anyone tests whether the numbers hold. Decisions rest on gut feel, feedback arrives after the money is spent, trade-offs stay invisible, and teams argue from different mental models. See the [product brief](docs/product-brief.md) for the problem, personas, hypotheses and success metrics.
+People commit savings or budgets to an idea before anyone tests whether the numbers could add up. First-time founders don't know what a typical sign-up rate or ad cost is; viability calculators hand out pass/fail verdicts without showing their reasoning; and feedback arrives only after the money is spent. Launch Lab shows what would have to be true instead. See the [product brief](docs/product-brief.md) for the problem, personas (led by Omer, a first-time founder), hypotheses and success metrics, and the [Test my idea spec](docs/test-my-idea.md) for the guided flow.
 
 ## Roadmap
 
@@ -20,11 +20,12 @@ Launch plans are committed before anyone tests whether the numbers hold. Decisio
 |---|---|---|
 | M0 · Foundation | Scaffold, CI, design tokens, light/dark, style guide | ✅ Shipped |
 | M1 · Simulation engine | Tested Monte Carlo engine with documented assumptions | ✅ Shipped |
-| M2 · Single-scenario lab | Editor, KPIs, funnel drop-off, insight headline | In progress |
-| M3 · Sensitivity | Tornado chart, "what matters most", methodology | |
-| M4 · Compare | Up to 3 scenarios side by side | |
-| M5 · Share + analytics | Report links, OG images, cookieless funnel analytics | |
-| M6 · Polish | E2E tests, accessibility, case study | |
+| M2 · Product types + viability | Sourced templates for 5 product types, break-even and "what would have to be true" math | In progress |
+| M3 · Test my idea | Guided 7-question flow and plain-language viability results | |
+| M4 · Expert mode | Every input, your own data, charts, sensitivity, methodology | |
+| M5 · Saved + compare | Browser-saved scenarios, compare up to 3 | |
+| M6 · Share + analytics | Report links, OG images, cookieless funnel analytics | |
+| M7 · Polish | E2E tests, accessibility, founder tests, case study | |
 
 ## Stack
 
