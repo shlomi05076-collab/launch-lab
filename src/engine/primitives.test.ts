@@ -149,7 +149,7 @@ describe("seasonality", () => {
 });
 
 describe("economics", () => {
-  const base = { price: 20, grossMargin: 0.8, model: "subscription" as const };
+  const base = { price: 20, grossMargin: 0.8, model: "subscription" as const, purchasesPerYear: 1 };
 
   it("CAC is spend per customer, Infinity with none", () => {
     expect(cac(1000, 4)).toBe(250);

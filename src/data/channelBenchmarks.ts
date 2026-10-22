@@ -267,8 +267,83 @@ export const channelBenchmarks: Record<ChannelId, ChannelRecords> = {
   },
 };
 
-export function channelAssumptions(id: ChannelId): ChannelAssumptions {
-  const r = channelBenchmarks[id];
+/** Who the product is sold to. Selects the channel cost profile. */
+export type Audience = "business" | "people";
+
+/**
+ * Consumer profile: where reaching people (not businesses) costs or converts differently.
+ * Channels not listed here use the business values above. See docs/model.md.
+ */
+export const consumerChannelOverrides: Partial<Record<ChannelId, Partial<ChannelRecords>>> = {
+  paid_search: {
+    costPerThousand: {
+      id: "consumer.paid_search.costPerThousand",
+      label: "Paid search (consumer): cost per 1,000 impressions",
+      value: { low: 40, likely: 130, high: 300 },
+      source:
+        "WordStream / LocaliQ 2025 consumer categories: Arts & Entertainment CPC $1.60, Restaurants & Food $2.05 (13.1% CTR in Arts)",
+      sourceUrl:
+        "https://searchengineland.com/google-ads-costs-keep-rising-but-conversion-rates-improved-in-2025-477927",
+      asOf: "2025-06",
+      why: "Consumer clicks cost $1–$3 rather than $5+, so CPM = ~$1.60 × ~8% CTR × 1,000 ≈ $130.",
+      confidence: "low",
+    },
+    clickThroughRate: {
+      id: "consumer.paid_search.clickThroughRate",
+      label: "Paid search (consumer): click-through rate",
+      value: { low: 0.05, likely: 0.08, high: 0.13 },
+      source: "WordStream / LocaliQ 2025 (all-industry 6.66%; Arts & Entertainment 13.1%)",
+      sourceUrl: "https://localiq.com/blog/search-advertising-benchmarks/",
+      asOf: "2025-06",
+      why: "Consumer categories click more than the all-industry 6.66%; 8% sits between average and the top.",
+      confidence: "medium",
+    },
+  },
+  paid_social: {
+    costPerThousand: {
+      id: "consumer.paid_social.costPerThousand",
+      label: "Paid social (consumer): cost per 1,000 impressions",
+      value: { low: 6, likely: 12, high: 18 },
+      source:
+        "Triple Whale FY2025 ($14.19 average, $13.48 median, 35k mostly consumer accounts); Vaizle 2025 ($5.97)",
+      sourceUrl: "https://triplewhale.com/blog/facebook-ads-benchmarks",
+      asOf: "2025-12",
+      why: "Consumer-brand accounts pay $13–$14; likely sits just below to allow for smaller advertisers.",
+      confidence: "medium",
+    },
+    clickThroughRate: {
+      id: "consumer.paid_social.clickThroughRate",
+      label: "Paid social (consumer): click-through rate",
+      value: { low: 0.011, likely: 0.02, high: 0.031 },
+      source: "Vaizle 2025 (quartiles 1.09%–3.06%, average 2.46%); Triple Whale FY2025 (2.19%)",
+      sourceUrl: "https://insights.vaizle.com/facebook-ad-benchmarks/",
+      asOf: "2025-12",
+      why: "These samples are mostly consumer brands, so their quartiles are used directly.",
+      confidence: "medium",
+    },
+  },
+  newsletter: {
+    costPerThousand: {
+      id: "consumer.newsletter.costPerThousand",
+      label: "Newsletter sponsorships (consumer): cost per 1,000 subscribers",
+      value: { low: 15, likely: 30, high: 60 },
+      source: "Paved cross-industry median ($32 per 1,000), via Voxbooster",
+      sourceUrl: "https://voxbooster.com/blog/newsletter-sponsorship-statistics-2026/",
+      asOf: "2026",
+      why: "Consumer newsletters price near the cross-industry median, well below B2B rates.",
+      confidence: "low",
+    },
+  },
+};
+
+export function channelAssumptions(
+  id: ChannelId,
+  audience: Audience = "business",
+): ChannelAssumptions {
+  const r = {
+    ...channelBenchmarks[id],
+    ...(audience === "people" ? consumerChannelOverrides[id] : {}),
+  };
   return {
     costPerThousand: r.costPerThousand.value,
     clickThroughRate: r.clickThroughRate.value,

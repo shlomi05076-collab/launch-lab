@@ -53,8 +53,19 @@ export type ModelAssumptions = {
 
 export type Month = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
+export const PRODUCT_TYPES = [
+  "b2b_software",
+  "consumer_app",
+  "online_store",
+  "digital_product",
+  "service",
+] as const;
+/** Selects the defaults and the channel cost profile (business or consumer) in src/data/. */
+export type ProductType = (typeof PRODUCT_TYPES)[number];
+
 export type ScenarioInput = {
   v: 1;
+  productType: ProductType;
   id: string;
   name: string;
   seed: number;
@@ -70,6 +81,11 @@ export type ScenarioInput = {
     grossMargin: number;
     /** Share of subscribers who cancel each month. Required for subscriptions. */
     monthlyChurn?: Range;
+    /**
+     * One-time pricing only: purchases per customer in their first year, including the first
+     * (1 = never buys again). Repeat purchases are spread evenly over the year.
+     */
+    purchasesPerYear?: Range;
   };
   /** 1–4 channels. Shares are normalised to sum to 1. */
   channels: Array<{
@@ -113,7 +129,11 @@ export type SimulationResult = {
   histogram: { metric: "paying"; bins: Array<{ x0: number; x1: number; count: number }> };
 };
 
-export type SensitivityMetric = "paying" | "revenue" | "cac";
+/**
+ * netReturn12m: gross margin the launch's customers earn within 12 months, minus the marketing
+ * spend. Unlike `paying`, it moves with price, churn and repeat purchases.
+ */
+export type SensitivityMetric = "paying" | "revenue" | "cac" | "netReturn12m";
 
 export type SensitivityBar = {
   /** Stable key, e.g. "funnel.signupRate" or "channel.paid_social.costPerThousand". */

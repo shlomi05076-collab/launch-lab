@@ -1,4 +1,5 @@
 import { pert } from "./distributions";
+import { customerValue12m } from "./economics";
 import { type LaunchOutcome, type LaunchParams, runLaunch } from "./funnel";
 import { likelyParams } from "./monteCarlo";
 import type {
@@ -35,9 +36,31 @@ type Probe = {
   ) => { input: ScenarioInput; params: LaunchParams };
 };
 
-function metricOf(outcome: LaunchOutcome, metric: SensitivityMetric): number {
+/** Gross margin the launch's customers earn within 12 months, minus the marketing spend. */
+export function netReturn12m(
+  outcome: LaunchOutcome,
+  input: ScenarioInput,
+  params: LaunchParams,
+): number {
+  const value = customerValue12m({
+    price: input.pricing.price,
+    grossMargin: input.pricing.grossMargin,
+    model: input.pricing.model,
+    monthlyChurn: params.monthlyChurn,
+    purchasesPerYear: params.purchasesPerYear,
+  });
+  return outcome.stages.paying * value - outcome.spend;
+}
+
+function metricOf(
+  outcome: LaunchOutcome,
+  metric: SensitivityMetric,
+  input: ScenarioInput,
+  params: LaunchParams,
+): number {
   if (metric === "paying") return outcome.stages.paying;
   if (metric === "revenue") return outcome.revenue;
+  if (metric === "netReturn12m") return netReturn12m(outcome, input, params);
   return outcome.cac;
 }
 
@@ -89,6 +112,18 @@ function probes(input: ScenarioInput, assumptions: ModelAssumptions): Probe[] {
     });
   }
 
+  if (input.pricing.model === "one_time" && input.pricing.purchasesPerYear) {
+    list.push({
+      input: "pricing.purchasesPerYear",
+      label: "Purchases per customer in the first year",
+      ...plausibleSwing(input.pricing.purchasesPerYear),
+      apply: (value, inp, params) => ({
+        input: inp,
+        params: { ...params, purchasesPerYear: value },
+      }),
+    });
+  }
+
   const fixed = (
     key: string,
     label: string,
@@ -130,7 +165,7 @@ export function runSensitivity(
 ): SensitivityResult {
   const base = likelyParams(input, assumptions);
   const evaluate = (inp: ScenarioInput, params: LaunchParams) =>
-    metricOf(runLaunch(inp, assumptions, params, null), metric);
+    metricOf(runLaunch(inp, assumptions, params, null), metric, inp, params);
   const baseline = evaluate(input, base);
 
   const bars: SensitivityBar[] = probes(input, assumptions).map((probe) => {

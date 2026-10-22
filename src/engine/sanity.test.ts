@@ -36,6 +36,7 @@ export const sanityAssumptions: ModelAssumptions = {
 
 export const sanityScenario: ScenarioInput = {
   v: 1,
+  productType: "b2b_software",
   id: "sanity",
   name: "Sanity check",
   seed: 1,

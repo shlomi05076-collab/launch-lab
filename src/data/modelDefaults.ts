@@ -1,6 +1,6 @@
 import { CHANNEL_IDS, type ModelAssumptions, type Range } from "@/engine";
 import type { Assumption } from "./assumption";
-import { channelAssumptions } from "./channelBenchmarks";
+import { type Audience, channelAssumptions } from "./channelBenchmarks";
 
 /* ---------- Seasonality ---------- */
 
@@ -114,10 +114,11 @@ export const modelAssumptionRecords: Assumption<unknown>[] = [
   grossMargin,
 ];
 
-export function defaultModelAssumptions(): ModelAssumptions {
+/** Model assumptions for a business or consumer audience (the channel cost profile differs). */
+export function defaultModelAssumptions(audience: Audience = "business"): ModelAssumptions {
   return {
     channels: Object.fromEntries(
-      CHANNEL_IDS.map((id) => [id, channelAssumptions(id)]),
+      CHANNEL_IDS.map((id) => [id, channelAssumptions(id, audience)]),
     ) as ModelAssumptions["channels"],
     seasonality: { cost: seasonalityCost.value, demand: seasonalityDemand.value },
     marketCorrelation: marketCorrelation.value,

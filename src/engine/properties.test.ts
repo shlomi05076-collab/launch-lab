@@ -7,7 +7,14 @@ import { describe, expect, it } from "vitest";
 import { defaultModelAssumptions } from "@/data/modelDefaults";
 import { expectedLaunch, simulate } from "./monteCarlo";
 import { toOutcomeRange } from "./outcomes";
-import { CHANNEL_IDS, type Dist, type Range, type ScenarioInput, STAGES } from "./types";
+import {
+  CHANNEL_IDS,
+  type Dist,
+  PRODUCT_TYPES,
+  type Range,
+  type ScenarioInput,
+  STAGES,
+} from "./types";
 
 const assumptions = defaultModelAssumptions();
 
@@ -25,6 +32,7 @@ const rangeArb = (min: number, max: number) =>
 
 const scenarioArb: fc.Arbitrary<ScenarioInput> = fc.record({
   v: fc.constant(1 as const),
+  productType: fc.constantFrom(...PRODUCT_TYPES),
   id: fc.constant("prop"),
   name: fc.constant("Property scenario"),
   seed: fc.integer({ min: 0, max: 2 ** 31 }),
@@ -35,6 +43,7 @@ const scenarioArb: fc.Arbitrary<ScenarioInput> = fc.record({
     price: fc.integer({ min: 1, max: 500 }),
     grossMargin: fc.double({ min: 0.1, max: 0.95, noNaN: true }),
     monthlyChurn: rangeArb(0, 0.15),
+    purchasesPerYear: rangeArb(1, 4),
   }),
   channels: fc
     .uniqueArray(fc.constantFrom(...CHANNEL_IDS), { minLength: 1, maxLength: 4 })
@@ -186,6 +195,7 @@ describe("simulation invariants (random scenarios)", () => {
 describe("market response", () => {
   const scenario: ScenarioInput = {
     v: 1,
+    productType: "b2b_software",
     id: "market",
     name: "Market response",
     seed: 9,

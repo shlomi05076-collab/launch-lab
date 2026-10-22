@@ -20,6 +20,7 @@ export const sampleProduct = {
 
 const shared = {
   v: 1,
+  productType: "b2b_software",
   audienceSize: 1_000_000,
   totalBudget: 30_000,
   pricing: {

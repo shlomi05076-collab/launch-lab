@@ -6,14 +6,25 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CHANNEL_IDS, type Range } from "@/engine";
 import type { Assumption } from "./assumption";
-import { channelBenchmarks } from "./channelBenchmarks";
+import { channelBenchmarks, consumerChannelOverrides } from "./channelBenchmarks";
+import { guidedAssumptionRecords } from "./guidedDefaults";
 import { modelAssumptionRecords, seasonalityCost, seasonalityDemand } from "./modelDefaults";
+import { productTypeAssumptionRecords, productTypes } from "./productTypes";
 import { sampleScenarios } from "./sampleScenarios";
 
 const channelRecords: Assumption<unknown>[] = CHANNEL_IDS.flatMap((id) =>
   Object.values(channelBenchmarks[id]),
 );
-const allRecords = [...channelRecords, ...modelAssumptionRecords];
+const consumerRecords: Assumption<unknown>[] = Object.values(consumerChannelOverrides).flatMap(
+  (records) => Object.values(records ?? {}),
+);
+const allRecords = [
+  ...channelRecords,
+  ...consumerRecords,
+  ...modelAssumptionRecords,
+  ...productTypeAssumptionRecords,
+  ...guidedAssumptionRecords,
+];
 const modelDoc = readFileSync(new URL("../../docs/model.md", import.meta.url), "utf8");
 
 const isRange = (v: unknown): v is Range =>
@@ -50,10 +61,34 @@ describe("assumption records", () => {
 
   it("rates are fractions between 0 and 1", () => {
     const rates = allRecords.filter(
-      (r) => /clickThroughRate|funnel\.|monthlyChurn/.test(r.id) && isRange(r.value),
+      (r) =>
+        /clickThroughRate|signupRate|activationRate|paidConversion|monthlyChurn/.test(r.id) &&
+        isRange(r.value),
     );
-    expect(rates.length).toBeGreaterThan(8);
+    expect(rates.length).toBeGreaterThan(20);
     for (const r of rates) expect((r.value as Range).high).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("product type templates", () => {
+  const JARGON = /\b(CAC|churn|conversion|funnel|CPM|CTR|LTV)\b/i;
+
+  it.each(
+    Object.values(productTypes).map((t) => [t.id, t] as const),
+  )("%s is internally consistent and jargon-free", (_, template) => {
+    const { pricing } = template;
+    if (pricing.model === "subscription") expect(pricing.monthlyChurn).toBeDefined();
+    else expect(pricing.purchasesPerYear).toBeDefined();
+    if (pricing.purchasesPerYear) {
+      expect(pricing.purchasesPerYear.value.low).toBeGreaterThanOrEqual(1);
+    }
+    expect(pricing.grossMargin.value).toBeGreaterThan(0);
+    expect(pricing.grossMargin.value).toBeLessThan(1);
+    expect(template.starterChannels.value.length).toBeGreaterThanOrEqual(1);
+    expect(template.starterChannels.value.length).toBeLessThanOrEqual(4);
+    for (const text of [template.choice, template.labels.signup, template.labels.paying]) {
+      expect(text).not.toMatch(JARGON);
+    }
   });
 });
 

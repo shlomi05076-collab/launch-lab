@@ -16,7 +16,7 @@ The primary persona is **Omer, 27**: he has an idea and some savings and has nev
 
 ## Status
 
-Current milestone: **M2 – Product types and viability math** (repositioned plan approved 2026-10-22; see [Milestones](#milestones)). Update this line when a milestone ships.
+Current milestone: **M3 – "Test my idea" guided flow** (see [Milestones](#milestones)). Update this line when a milestone ships.
 
 - **Live:** https://launch-lab-phi.vercel.app (Vercel Hobby, auto-deploys every push to `main`)
 - **Repo:** https://github.com/shlomi05076-collab/launch-lab (public). Commits use the noreply email set in the repo-local git config. Keep it that way.
@@ -152,7 +152,7 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
    │  ├─ sanity.test.ts         # the hand-calculated worked example from docs/model.md
    │  ├─ properties.test.ts     # fast-check invariants on random scenarios
    │  └─ *.test.ts              # other colocated tests
-   ├─ insights/                 # PURE. results → findings + headline sentence; cheapTests.ts (+ tests)
+   ├─ insights/                 # PURE. viability.ts (headline, requirement rows, banned-words test); cheapTests.ts in M3
    ├─ design/
    │  ├─ palette.ts             # color values per theme; mirrored in globals.css (test-enforced)
    │  └─ fonts.ts               # next/font setup; each trio sets --ff-display/--ff-body/--ff-mono
@@ -161,6 +161,7 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
    │  ├─ channelBenchmarks.ts   # per-channel CPM, CTR, intent, ramp
    │  ├─ modelDefaults.ts       # seasonality, market correlation, funnel, churn, margin
    │  ├─ productTypes.ts        # 5 product-type templates: funnel, price, churn, channel profile, starter mix
+   │  ├─ guidedDefaults.ts      # estimates with no benchmark: audience bands, example budget, promotion length
    │  └─ sampleScenarios.ts     # Briefly + 3 scenarios ("See an example")
    ├─ schema/
    │  ├─ scenario.ts            # Zod schemas (inputs to the engine)
@@ -200,12 +201,14 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
 - `SimulationResult`: stages, dropOff, byChannel, weekly (cumulative paying + revenue), revenue, mrrAtEnd, cac, paybackMonths, `probPaybackWithin12`, `probNeverPayback`, histogram.
 - `SensitivityResult`: `baseline` + `bars` sorted by swing (`input`, `label`, `inputLow/High`, `metricAtLow/High`, `swing`).
 - `Insight` (`src/insights/`): `{ headline, findings[] }`. Findings have a kind (winner, payback_risk, biggest_leak, top_driver, channel_mismatch, break_even, must_be_true) and a severity (info, good, warning, risk).
-- **Planned for M2** (no share links exist yet, so `v: 1` can still change; from M6 on, any change bumps `v` with a migration):
-  - `ScenarioInput.productType`: one of `b2b_software | consumer_app | online_store | digital_product | service`. It selects the channel profile (business or consumer costs and click rates) and the defaults, so a share link reproduces the same assumptions.
+- **Built in M2:**
+  - `ScenarioInput.productType`: one of `b2b_software | consumer_app | online_store | digital_product | service`. `defaultModelAssumptions(audience)` picks the business or consumer channel profile from the template (`src/data/productTypes.ts`).
+  - `ScenarioInput.pricing.purchasesPerYear` (one-time only): purchases per customer in their first year, sourced per product type. Repeats are spread evenly over the year.
+  - `Viability` (`engine/viability.ts`, `assessViability()`): `{ spend, customerValue12m, breakEvenCustomers, expectedCustomers, aboveBreakEven, requirements[], mattersMost }`. Each requirement is `{ input, betterWhen, typical: { p10, likely, p90 }, current, needed | null, status: 'typical' | 'above_typical' | 'rare' }`. Inputs: signupRate, payingRate (activation × paid), costPerVisitor, price, monthlyChurn or purchasesPerYear.
+  - Sensitivity metric `netReturn12m` (12-month gross margin − spend) ranks "matters most" in guided mode.
+- **Planned for M4** (no share links exist yet, so `v: 1` can still change; from M6 on, any change bumps `v` with a migration):
   - `ScenarioInput.provenance`: which values came from defaults versus the user ("your data").
   - Custom channels: a channel entry may carry its own full `ChannelAssumptions` (user-named, no benchmark), always labeled "your data".
-  - `Viability` (`engine/viability.ts`): `{ breakEvenCustomers, customerValue12m, likelyCustomers: OutcomeRange, probBreakEven12m, mustBeTrue: Array<{ input, label, typical: Range, current, needed, status: 'typical' | 'above_typical' | 'rare'; reachable: boolean }> }`.
-  - `ScenarioInput.pricing.purchasesPerYear` (one-time only): expected purchases per customer in their first year, sourced per product type.
 
 ### How one simulated launch works (summary of docs/model.md)
 
@@ -268,7 +271,7 @@ Each milestone is deployed to the public Vercel URL, works on its own, and ends 
 
 *Repositioned 2026-10-22 before M2: "Test my idea" is now the main entry point, and the old single-scenario lab became expert mode (M4). Old M3 (sensitivity) is split: the "matters most" sentence ships in M3 and the tornado chart in M4.*
 
-- [ ] **M2 – Product types and viability math.** Engine, data and insights, with no new UI.
+- [x] **M2 – Product types and viability math.** *(Shipped 2026-10-23, tag `m2`.)* Engine, data and insights, with no new UI.
   - Five product-type templates in `src/data/productTypes.ts` (funnel, typical price, churn, channel profile, starter channel mix), each value sourced, dated and documented in `docs/model.md`.
   - Consumer channel profile (CPM and click rates) alongside the existing business one. `productType` on `ScenarioInput`.
   - `engine/viability.ts`: customer value over 12 months, customers needed to break even, chance of breaking even within 12 months, and the "what would have to be true" solver (bisection on expected-value runs) with Typical / Better than typical / Rarely seen / Not enough on its own.
@@ -327,4 +330,6 @@ Record significant decisions here (one line each) and write an ADR in `docs/deci
 - 2026-10-22: Sensitivity swings inputs between their P10 and P90, not their extremes.
 - 2026-10-22: Channel set narrowed to six with sourceable benchmarks. Sample price is $49 per team per month.
 - 2026-10-22: Cookieless product analytics in M5. Vercel Web Analytics custom events are Pro-only (checked 2026-10-22), so provider TBD.
+- 2026-10-23: M2 sources: each product type is sourced where data exists and labeled "Launch Lab judgment" where it doesn't. Course and service funnels and the service margin are the thinnest; see docs/model.md.
+- 2026-10-23: Guided "matters most" ranks inputs by net return within a year, not by paying customers, so price, churn and repeat purchases can surface.
 - 2026-10-22: **Repositioned for anyone with a product idea.** New primary persona Omer (first-time founder, no marketing or finance background) and hypothesis H6 (explaining what must be true beats a pass/fail verdict). Guided "Test my idea" flow is the main entry point; the full lab becomes expert mode. Product-type templates with sourced defaults, browser-saved scenarios, and a disclaimer on every result. Milestones re-planned as M2–M7.

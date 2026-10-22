@@ -81,7 +81,7 @@ New subscribers start paying in the week they convert, at price ÷ (52 ÷ 12) pe
 - **Revenue in the launch window:** everything collected during the window.
 - **MRR at the end:** active subscribers × monthly price.
 
-With one-time pricing, each customer pays once, and churn and MRR don't apply.
+With one-time pricing, churn and MRR don't apply. Each customer makes a first purchase in the week they convert. Customers who buy again (**purchases per customer in the first year**, sourced per product type) make their repeat purchases evenly over the following 12 months. Repeat purchases that fall inside the launch window count toward revenue in the window.
 
 ### 7. CAC and payback
 
@@ -97,7 +97,12 @@ Solving the cumulative margin g(1 − (1−c)ⁿ)/c = CAC for *n* gives:
 
 > payback months = ln(1 − CAC × c ÷ g) ÷ ln(1 − c)
 
-This is how the model can say "a 40% chance of never paying back": in 40% of simulated worlds, CAC exceeds the lifetime cap. For one-time pricing, payback is immediate if the first sale's margin covers CAC, and never otherwise.
+This is how the model can say "a 40% chance of never paying back": in 40% of simulated worlds, CAC exceeds the lifetime cap.
+
+For one-time pricing:
+- Payback is immediate if the first purchase's margin covers CAC.
+- Otherwise, repeat purchases pay it back part-way through the first year: months = (CAC − first-purchase margin) ÷ (monthly margin from repeats).
+- Purchases after the first year aren't modeled, so if the first year doesn't cover CAC the payback is reported as "not within the first year".
 
 ---
 
@@ -133,6 +138,41 @@ The tornado analysis takes one input at a time and moves it between its **plausi
 
 These runs have no randomness, so the ranking is exact. The input with the biggest swing is "what matters most." In the sample scenarios it is usually **sign-up rate**, closely followed by **paid conversion**. That's a useful reminder that positioning and onboarding often matter more than channel choice.
 
+Expert mode can rank inputs by paying customers, revenue or CAC. The guided "Test my idea" flow ranks them by **net return within a year**: the gross margin the launch's customers earn in 12 months, minus the marketing spend. Paying customers alone would miss price, churn and repeat purchases, which don't change how many people buy but decide whether they earn the spend back.
+
+---
+
+## Break-even: what would have to be true
+
+The guided flow answers "can my idea work, and what would have to be true?" without a verdict. Three numbers carry the answer.
+
+**1. What one customer is worth in a year.** The gross margin a customer earns in their first 12 months:
+- Subscription: g × (1 − (1 − c)¹²) ÷ c, where g = price × gross margin and c = monthly churn (12 × g with no churn).
+- One-time: price × gross margin × purchases in the first year.
+
+**2. Customers needed to break even** = marketing spend ÷ what one customer is worth in a year. Break-even means the customers won during the launch **earn back the marketing spend within 12 months**. It covers marketing spend only, not the cost of building or running the product, and the results say so.
+
+**3. What would have to be true.** For each key input on its own, the engine finds the value at which the *likely* launch (no randomness, every other input at its typical value) lands exactly on break-even. Bisection works here because each input moves the outcome in one direction only. The inputs are:
+
+| Requirement | Better when | Notes |
+|---|---|---|
+| Visitors who sign up (sign-up rate) | higher | |
+| Sign-ups who end up paying (activation × paid conversion) | higher | Solved as one combined rate |
+| Cost per visitor from ads | lower | Every channel's cost per 1,000 scaled by the same factor; blended by budget share |
+| Price | higher | |
+| Customers who cancel each month (subscriptions) | lower | |
+| Purchases per customer in the first year (one-time) | higher | |
+
+Each needed value is compared with what similar products achieve: the input's typical range from the product-type template. For combined rates, the typical range comes from a 64 × 64 grid over both distributions.
+
+| Needed value is… | Label |
+|---|---|
+| At or better than what similar products usually get (their likely value) | **Typical** |
+| Beyond that, but within what the top ~10% reach (their P90, or P10 for costs and churn) | **Needs above-typical results** |
+| Beyond the top ~10%, or not reachable by changing this input alone | **Rarely seen** |
+
+The labels describe the **requirement**, never the idea. When the launch is already above break-even, each needed value shows how much room there is (e.g. "sign-ups could fall to 1 in 70"), and every status is Typical by construction; a property test checks this. The **chance to earn back the spend within a year** comes from the 5,000-run simulation: the share of simulated launches whose customers' first-year value covers their cost. For subscriptions that equals the chance of payback within 12 months.
+
 ---
 
 ## Worked example
@@ -160,6 +200,22 @@ Note that visitors come out at 9,950, slightly under 1% of impressions: a few pe
 - With a one-time $150 price, payback is immediate ($120 margin ≥ $100.50 CAC).
 - Spreading the same budget over 4 weeks still gives 99.5 paying customers.
 - With randomness switched on, the average lands within 2% of 99.5.
+
+### Break-even worked example
+
+`src/engine/viability.test.ts` checks every line, using the same scenario as above:
+
+| Step | Calculation | Result |
+|---|---|---|
+| Value of one customer in a year | $16 × (1 − 0.97¹²) ÷ 0.03 = $16 × 0.30616 ÷ 0.03 | $163.28 |
+| Customers needed | $10,000 ÷ $163.28 | 61.2 |
+| Likely customers (from above) | | 99.5, so above break-even |
+| Sign-up rate could fall to | 10% × 61.2 ÷ 99.5 | 6.15% (1 in 16) |
+| Price could fall to | $20 × 61.2 ÷ 99.5 | $12.31 |
+| Sign-ups who pay could fall to | 10% × 61.2 ÷ 99.5 | 6.15% |
+| Churn could rise to | solve 99.5 × $16 × (1 − (1 − c)¹²) ÷ c = $10,000 | ≈ 12.9% a month |
+
+Sign-up rate and price scale the number of paying customers (or their value) in direct proportion, so their thresholds are simple ratios. Churn enters through the 12-month value, so it has to be solved numerically.
 
 ---
 
@@ -296,6 +352,102 @@ These describe the sample product (Briefly, AI meeting notes for small teams, $4
 - **Paid conversion is measured from *activated* users,** so it sits higher than trial→paid benchmarks. Dividing trial→paid by the activation rate converts one to the other.
 - **SMB churn:** published figures run from about 1% to 7% a month, depending largely on monthly versus annual billing. A new product billed monthly sits in the middle to upper part of that range.
 
+### Consumer channel profile
+
+Products sold to people rather than businesses use these values. Channels not listed keep the business values above. LinkedIn isn't offered for consumer products.
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `consumer.paid_search.costPerThousand` | $40 / **$130** / $300 | WordStream / LocaliQ 2025 consumer categories via [Search Engine Land](https://searchengineland.com/google-ads-costs-keep-rising-but-conversion-rates-improved-in-2025-477927) (Arts & Entertainment CPC $1.60, Restaurants & Food $2.05) (2025-06) | Consumer clicks cost $1–$3 rather than $5+, so CPM ≈ $1.60 × 8% × 1,000 ≈ $130 | Low |
+| `consumer.paid_search.clickThroughRate` | 5% / **8%** / 13% | [LocaliQ / WordStream 2025](https://localiq.com/blog/search-advertising-benchmarks/) (all-industry 6.66%; Arts & Entertainment 13.1%) (2025-06) | Consumer categories click more than the all-industry average | Medium |
+| `consumer.paid_social.costPerThousand` | $6 / **$12** / $18 | [Triple Whale FY2025](https://triplewhale.com/blog/facebook-ads-benchmarks) ($14.19 average, $13.48 median, mostly consumer brands); Vaizle 2025 ($5.97) (2025-12) | Just below the consumer-brand median, to allow for smaller advertisers | Medium |
+| `consumer.paid_social.clickThroughRate` | 1.1% / **2%** / 3.1% | [Vaizle 2025](https://insights.vaizle.com/facebook-ad-benchmarks/) (quartiles 1.09%–3.06%); Triple Whale FY2025 (2.19%) (2025-12) | These samples are mostly consumer brands, so their quartiles are used directly | Medium |
+| `consumer.newsletter.costPerThousand` | $15 / **$30** / $60 | Paved cross-industry median ($32) via [Voxbooster](https://voxbooster.com/blog/newsletter-sponsorship-statistics-2026/) (2026) | Consumer newsletters price near the cross-industry median | Low |
+
+*Where sources disagree:*
+- **Search CPC:** published 2025 medians for retail-like categories run as low as $0.35 (floral and gifts), while category averages sit at $1.60–$2.05. The range spans both.
+
+### Product types
+
+Each product type is a template behind the guided flow's "not sure" answers. B2B software reuses the funnel and churn values above (`funnel.signupRate`, `funnel.activationRate`, `funnel.paidConversion`, `pricing.monthlyChurn`). The funnel steps are named in plain words per type: for a store, the three steps are add to cart → start checkout → complete the order.
+
+#### B2B software (business audience, monthly subscription)
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `b2b_software.price` | $9 / **$24** / $60 a month | [Monetizely 2025](https://www.getmonetizely.com/articles/saas-pricing-benchmark-study-2025-key-insights-from-100-companies-analyzed) (SMB starter median $15 per user, $9–$29); Dupple index of 294 tools (median entry plan $24) (2025) | Entry plans cluster at $15–$24; a small team on a few seats pays up to ~$60 | Medium |
+| `b2b_software.grossMargin` | 75% | SaaSRise 2026 (B2B median 75%); [Aleph × Benchmarkit 2025](https://www.getaleph.com/answers/saas-gross-margin-2026) (software 80%) (2025) | Support and hosting weigh more at small scale | Medium |
+| `b2b_software.starterChannels` | Paid search, LinkedIn ads, content & SEO | Launch Lab judgment (2026-10) | Business buyers search for tools and can be targeted by role | Low |
+
+#### Consumer app (consumer audience, monthly subscription)
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `consumer_app.price` | $3 / **$7** / $13 a month | RevenueCat 2025 via [Airbridge](https://www.airbridge.io/en/blog/subscription-app-pricing-by-category-2026-benchmark) (median $6.68; P25 $3.26, P75 $11.99); Adapty 2026 (median $12.99) (2025) | The median monthly plan is about $7 | Medium |
+| `consumer_app.grossMargin` | 70% | [Apple App Store Small Business Program](https://developer.apple.com/app-store/small-business-program/) (15% commission) (2025) | After store fees, hosting and support | Medium |
+| `consumer_app.monthlyChurn` | 5% / **10%** / 18% | RevenueCat 2025 via [SaaStr](https://www.saastr.com/the-top-10-learnings-from-revenuecats-state-of-subscription-apps/) (~72% of annual plans cancelled in year one) (2025) | 72% lost in a year ≈ 10% a month: 1 − 0.28^(1/12) | Low |
+| `consumer_app.signupRate` | 5% / **15%** / 30% (visitor → install) | [AppTweak 2025](https://www.apptweak.com/aso-blog/mobile-app-store-conversion-rate-benchmarks-per-category) (store page → download: App Store 8.56%, Google Play 16.15%) (2025) | Ad visitors land on the store page and are pre-qualified | Medium |
+| `consumer_app.activationRate` | 3% / **6%** / 12% (install → trial) | Adapty via [Airbridge](https://www.airbridge.io/en/blog/why-subscription-app-get-installs-no-paid-subscribers) (median install-to-trial 6.2%) (2025) | About 6 in 100 installers start a trial | Low |
+| `consumer_app.paidConversion` | 20% / **35%** / 50% (trial → paying) | RevenueCat 2025 via SaaStr (25.5% for ≤ 4-day trials, 42.5% for 17–32-day) (2025) | 6% × 35% ≈ 2.1% of installs pay, close to RevenueCat's 1.9% median | Medium |
+| `consumer_app.starterChannels` | Paid social, creators | Launch Lab judgment (2026-10) | Consumer apps are mostly found in feeds and through creators | Low |
+
+*Where sources disagree:* Apple has said default store pages convert about 1.6% of views, far below AppTweak's 8.56%, probably because the denominators differ. The low end of the install range (5%) allows for it. Monthly price medians differ between RevenueCat ($6.68) and Adapty ($12.99); the range covers both.
+
+#### Online store (consumer audience, one-time purchase)
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `online_store.price` | $50 / **$85** / $185 per order | [Top Growth Marketing](https://topgrowthmarketing.com/dtc-ecommerce-benchmarks/average-order-value-benchmarks/) DTC panel (median ~$83; middle 50% $63–$186); Flowium ($50–$150) (2026) | Small direct-to-consumer stores see a median order of about $83 | Medium |
+| `online_store.grossMargin` | 45% | [Eightx](https://eightx.co/blog/average-ecommerce-gross-margin-by-revenue-band-2026) (public DTC brands ~43.7%) (2026) | Product, packaging and fulfilment take over half of each order | Medium |
+| `online_store.purchasesPerYear` | 1.1 / **1.3** / 1.7 | [Rivo](https://rivo.io/blog/repeat-purchase-rate-complete-guide) and Yotpo repeat-purchase benchmarks (~28% average; 9.9% luxury to 65% grocery) (2025) | About 27% buy again and some a third time | Low |
+| `online_store.signupRate` | 2.5% / **5%** / 9.6% (visitor → add to cart) | Littledata Shopify via [Nudgify](https://www.nudgify.com/shopify-conversion-rate-benchmarks/) (4.6% average, top 10% 9.6%); Dynamic Yield (6.08%) (2025) | About 1 in 20 visitors add something to their cart | Medium |
+| `online_store.activationRate` | 50% / **70%** / 85% (cart → start checkout) | Derived from Littledata and Shogun via [Blend Commerce](https://blendcommerce.com/blogs/shopify/ecommerce-conversion-rate-benchmarks-2025): conversion 1.4%–1.7% ÷ add-to-cart ~5% ÷ checkout completion 45% (2025) | The share that makes the other published rates add up | Low |
+| `online_store.paidConversion` | 35% / **45%** / 66% (checkout → order) | Littledata Shopify (45% average, top 10% 66%); Top Growth Marketing (65% median) (2025) | Fewer than half of started checkouts finish | Medium |
+| `online_store.starterChannels` | Paid social, paid search, creators | Launch Lab judgment (2026-10) | Stores sell through feeds and shopping searches | Low |
+
+*Where sources disagree:*
+- **Checkout completion:** Littledata's 45% average vs a 65% median across 16 DTC stores. The smaller sample likely skews toward well-run stores, so the likely value follows Littledata.
+- **Overall conversion:** published figures range from 1.4% to 2.6%. The template's three steps multiply to about 1.6%.
+
+#### Digital product or course (consumer audience, one-time purchase)
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `digital_product.price` | $30 / **$135** / $400 | [CustomerHub](https://customerhub.com/post/average-price-for-online-courses) ($100–$500 typical, mini-courses $20–$200); bmti ($137 average across 132,000+ courses) (2025) | Courses center near $137; ebooks and mini-courses sit lower | Low |
+| `digital_product.grossMargin` | 88% | Launch Lab estimate from course-platform and payment fees (2026-10) | Another copy costs little beyond ~5%–10% platform and ~3% payment fees | Low |
+| `digital_product.purchasesPerYear` | 1.0 / **1.15** / 1.4 | Launch Lab judgment (2026-10) | No benchmark found; a minority buy an upsell or second product | Low |
+| `digital_product.signupRate` | 5% / **12%** / 25% (visitor → email list) | [Webtonic 2026](https://www.webtonic.io/blog/education-coaching-landing-page-statistics) (course opt-in pages 18.3%; education landing pages 8.4%) (2026) | Paid visitors are colder than these pages' usual traffic | Low |
+| `digital_product.activationRate` | 30% / **50%** / 70% (email list → sales page) | Launch Lab judgment (2026-10) | No benchmark found; about half of new subscribers open the launch emails | Low |
+| `digital_product.paidConversion` | 2% / **4%** / 10% (sales page → purchase) | [Teachery](https://www.teachery.co/blog/sales-page-for-online-course) (2%–5%, top pages 10%–15%); Webtonic (coaching 3%–5% cold) (2025) | Course sales pages convert a few percent of visitors | Medium |
+| `digital_product.starterChannels` | Paid social, newsletters, content & SEO | Launch Lab judgment (2026-10) | Courses grow an email list from feeds, newsletters and articles | Low |
+
+*Where sources disagree:* sales-page conversion estimates run from 1.5% (a vendor's worked example) to 2%–5% (Teachery). The likely 4% sits in Teachery's range because launch emails send warmer traffic than cold ads. This is the thinnest-sourced template; three of its seven values are judgment.
+
+#### Service or agency (business audience, monthly retainer)
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `service.price` | $1,000 / **$2,500** / $6,000 a month | [Predictable Profits 2025](https://predictableprofits.com/2025-agency-growth-benchmark-key-metrics-from-300-7-8-figure-agencies/) (small agencies' most common retainer under $5,000); BuzzStream (average $5,458, half below $5,000) (2025) | A new service business usually starts below the $5,000 median | Medium |
+| `service.grossMargin` | 50% | Launch Lab judgment (2026-10) | No benchmark found; delivery time typically takes about half of fees | Low |
+| `service.monthlyChurn` | 1.5% / **3%** / 5.5% | [Focus Digital 2025](https://focus-digital.co/?p=6135) (18% annual churn on retainers, 42% project-based); Whitehat (PPC 49%, SEO 38%, full-service 25% a year) (2025) | 18%–49% a year ≈ 1.6%–5.5% a month | Medium |
+| `service.purchasesPerYear` | 1.0 / **1.4** / 2.0 (if billed per project) | Launch Lab judgment (2026-10) | No benchmark found; some project clients return within a year | Low |
+| `service.signupRate` | 1% / **3%** / 6% (visitor → enquiry) | [LowCode Agency](https://www.lowcode.agency/blog/b2b-website-conversion-benchmarks-by-industry) and Clicksgeek (lead forms 1%–3%, consultation pages 2%–5%); Unbounce (median 6.1%) (2025) | About 1 in 30 visitors to a service site get in touch | Medium |
+| `service.activationRate` | 40% / **60%** / 80% (enquiry → call) | Launch Lab judgment (2026-10) | No benchmark found; many enquiries never book a call | Low |
+| `service.paidConversion` | 10% / **25%** / 40% (call → client) | Launch Lab judgment (2026-10) | No benchmark found; about 1 in 4 calls without referrals | Low |
+| `service.starterChannels` | Paid search, LinkedIn ads, content & SEO | Launch Lab judgment (2026-10) | Clients search for providers; articles build trust | Low |
+
+*Where sources disagree:* published agency retention runs from 70% to 92% a year, depending on agency size and service mix. The churn range covers retainers through PPC-heavy work. No published close rate for small service businesses was found, so the enquiry → call → client steps are explicit judgment and the first numbers a user should replace.
+
+### Guided-flow defaults (estimates, not benchmarks)
+
+These answer "not sure" where no benchmark exists. Wherever they appear, they're labeled "rough estimate" or "example amount".
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `guided.audienceBands` | Niche ~30,000 · specific group ~300,000 · broad market ~3,000,000 | Launch Lab estimate (2026-10) | Each band is 10× the last, enough to show how audience size changes the answer | Low |
+| `guided.exampleBudget` | $5,000 | Launch Lab example amount (2026-10) | No benchmark exists for the right launch budget, so it's labeled an example | Low |
+| `guided.promotionWeeks` | 8 weeks | Launch Lab example (2026-10) | Long enough for content to start ranking, short enough for a launch push | Low |
+
 ---
 
 ## Behaviors worth knowing
@@ -321,6 +473,10 @@ Stated up front, because a model is only as credible as its known gaps.
 6. **First-touch, proportional attribution.** A visitor is credited to channels in proportion to that week's clicks. That's fine for planning, not for measuring real campaigns.
 7. **Independent channel costs.** A crowded quarter raises all ad prices together. Seasonality captures the average effect, but not a bad-luck quarter that hits every channel at once.
 8. **US-weighted benchmarks.** Most sources are US or global averages from 2025–2026.
+9. **Break-even covers marketing spend only.** Building, hosting and running the product aren't included. The results say so next to every break-even number.
+10. **One-time products stop at year one.** Purchases after a customer's first year aren't counted, so long-lived stores and courses are understated.
+11. **Product-type templates are averages of very different businesses.** A niche store and a mass-market store share one template. Several template values (course and service funnels, service margin) have no published benchmark and are labeled as judgment.
+12. **"What would have to be true" changes one input at a time.** Real improvements often come in combination. A requirement marked "not reachable by changing this alone" may be reachable together with others, and expert mode is the place to try that.
 
 ## v2 roadmap
 
@@ -332,6 +488,13 @@ Stated up front, because a model is only as credible as its known gaps.
 - **Regional seasonality and benchmarks:** EU and APEC indices alongside the US defaults.
 
 ## Changelog
+
+- **2026-10-23: M2.**
+  - Product-type templates for B2B software, consumer apps, online stores, digital products and services.
+  - A consumer channel profile, and purchases per customer in the first year for one-time products.
+  - Break-even, customers needed and the "what would have to be true" solver.
+  - Sensitivity can rank inputs by net return within a year.
+  - Subscription results are unchanged from M1: the new purchases draw only happens for one-time products, so the random sequence is identical.
 
 - **2026-10-22: M1.**
   - Initial model.

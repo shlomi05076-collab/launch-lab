@@ -13,6 +13,8 @@ export type LaunchParams = {
   activationRate: number;
   paidConversion: number;
   monthlyChurn: number;
+  /** One-time pricing: purchases per customer in the first year (≥ 1). */
+  purchasesPerYear: number;
 };
 
 export type LaunchOutcome = {
@@ -134,16 +136,20 @@ export function runLaunch(
   let cumulativePaying = 0;
   let activeSubscribers = 0;
   let revenue = 0;
+  // One-time: repeat purchases are spread evenly over each customer's first year.
+  const repeatsPerWeek = isSubscription ? 0 : (Math.max(1, params.purchasesPerYear) - 1) / 52;
   for (let week = 0; week < weeks; week++) {
     const joined = newPaying[week] as number;
-    cumulativePaying += joined;
     if (isSubscription) {
       // Existing subscribers churn a little each week; new ones pay from the week they join.
       activeSubscribers = activeSubscribers * retention + joined;
       revenue += activeSubscribers * weeklyPrice;
     } else {
-      revenue += joined * price;
+      // First purchases this week, plus repeat purchases from earlier customers (the window is
+      // at most 26 weeks, so every earlier customer is still inside their first year).
+      revenue += (joined + cumulativePaying * repeatsPerWeek) * price;
     }
+    cumulativePaying += joined;
     weeklyPaying[week] = cumulativePaying;
     weeklyRevenue[week] = revenue;
   }
@@ -166,6 +172,7 @@ export function runLaunch(
       grossMargin,
       model,
       monthlyChurn: churn,
+      purchasesPerYear: params.purchasesPerYear,
     }),
   };
 }

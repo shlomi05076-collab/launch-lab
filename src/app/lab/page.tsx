@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Disclaimer } from "@/components/ui/Disclaimer";
 import { defaultModelAssumptions } from "@/data/modelDefaults";
 import { sampleProduct, sampleScenarios } from "@/data/sampleScenarios";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/engine";
 import { formatCount, formatCurrency, formatMonths, formatPercent } from "@/lib/format";
 import { site } from "@/lib/site";
+import { ProductTypeReadout } from "./ProductTypeReadout";
 
 export const metadata: Metadata = { title: "Engine readout" };
 
@@ -59,18 +61,30 @@ export default function LabPage() {
   const first = sampleScenarios[0];
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <header className="mb-8 flex max-w-3xl flex-col gap-3">
-        <p className="label">M1 · engine readout · temporary</p>
+      <header className="mb-10 flex max-w-3xl flex-col gap-3">
+        <p className="label">M2 · engine readout · temporary</p>
         <h1 className="display text-4xl">Simulation engine</h1>
         <p className="text-pretty text-ink-muted">
+          What the engine and the viability math produce today. The guided "Test my idea" flow
+          arrives in M3, and the interactive expert lab in M4.
+        </p>
+      </header>
+
+      <ProductTypeReadout />
+
+      <section aria-labelledby="example" className="flex flex-col gap-3">
+        <h2 id="example" className="display text-3xl">
+          Example: one product, three launch plans
+        </h2>
+        <p className="max-w-3xl text-pretty text-ink-muted">
           {sampleProduct.name} ({sampleProduct.description}, ${first?.pricing.price}/month) launched
           three ways with the same {formatCurrency(first?.totalBudget ?? 0)} budget over{" "}
           {first?.window.weeks} weeks. {formatCount(DEFAULT_RUNS)} simulated launches each. Each
           cell shows the likely outcome with the downside and upside beneath it: 10% of simulated
-          launches did worse than the downside, and 10% did better than the upside. The interactive
-          lab arrives in M2.
+          launches did worse than the downside, and 10% did better than the upside.
         </p>
-      </header>
+        <Disclaimer className="mb-2" />
+      </section>
 
       <div className="overflow-x-auto border border-rule">
         <table className="w-full min-w-[40rem] border-collapse text-left">

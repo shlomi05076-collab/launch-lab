@@ -15,6 +15,8 @@ export const DEFAULT_RUNS = 5000;
 
 /** A range with no uncertainty, used where a scenario omits churn (one-time pricing). */
 const ZERO: Range = { low: 0, likely: 0, high: 0 };
+/** Used where a one-time scenario omits repeat purchases: every customer buys exactly once. */
+const ONCE: Range = { low: 1, likely: 1, high: 1 };
 
 /** The scenario's inputs, each at its "likely" value. Used for expected-value runs. */
 export function likelyParams(input: ScenarioInput, assumptions: ModelAssumptions): LaunchParams {
@@ -27,6 +29,7 @@ export function likelyParams(input: ScenarioInput, assumptions: ModelAssumptions
     activationRate: input.funnel.activationRate.likely,
     paidConversion: input.funnel.paidConversion.likely,
     monthlyChurn: (input.pricing.monthlyChurn ?? ZERO).likely,
+    purchasesPerYear: (input.pricing.purchasesPerYear ?? ONCE).likely,
   };
 }
 
@@ -41,6 +44,8 @@ type Samplers = {
   activationRate: Sampler;
   paidConversion: Sampler;
   monthlyChurn: Sampler;
+  /** Null for subscriptions, so their random sequence (and results) stay unchanged. */
+  purchasesPerYear: Sampler | null;
 };
 
 function buildSamplers(input: ScenarioInput, assumptions: ModelAssumptions): Samplers {
@@ -53,6 +58,8 @@ function buildSamplers(input: ScenarioInput, assumptions: ModelAssumptions): Sam
     activationRate: pert(input.funnel.activationRate),
     paidConversion: pert(input.funnel.paidConversion),
     monthlyChurn: pert(input.pricing.monthlyChurn ?? ZERO),
+    purchasesPerYear:
+      input.pricing.model === "one_time" ? pert(input.pricing.purchasesPerYear ?? ONCE) : null,
   };
 }
 
@@ -80,6 +87,7 @@ function drawParams(samplers: Samplers, correlation: number, rng: Rng): LaunchPa
       clickThroughRate: c.clickThroughRate.quantile(rng()),
     })),
     monthlyChurn: samplers.monthlyChurn.quantile(rng()),
+    purchasesPerYear: samplers.purchasesPerYear ? samplers.purchasesPerYear.quantile(rng()) : 1,
   };
 }
 

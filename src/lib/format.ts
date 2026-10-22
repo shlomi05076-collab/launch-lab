@@ -35,3 +35,40 @@ export function formatMonths(months: number): string {
 export function formatPercent(share: number): string {
   return `${Math.round(share * 100)}%`;
 }
+
+/**
+ * A rate as "1 in N", the way people without a stats background read odds.
+ * 0.04 → "1 in 25"; 0.4 → "1 in 2.5"; 0.0008 → "1 in 1,300". Rates ≥ 1 → "every one".
+ */
+export function formatOneIn(rate: number): string {
+  if (!Number.isFinite(rate) || rate <= 0) return "none";
+  if (rate >= 1) return "every one";
+  const n = 1 / rate;
+  if (n < 3) return `1 in ${Math.round(n * 10) / 10}`;
+  if (n < 100) return `1 in ${Math.round(n)}`;
+  const magnitude = 10 ** (Math.floor(Math.log10(n)) - 1);
+  return `1 in ${count.format(Math.round(n / magnitude) * magnitude)}`;
+}
+
+/** A count for prose, rounded to what's honest: 7, 64, 160, 1,300. */
+export function formatApproxCount(n: number): string {
+  if (!Number.isFinite(n)) return "–";
+  if (n < 100) return count.format(Math.round(n));
+  const magnitude = 10 ** (Math.floor(Math.log10(n)) - 1);
+  return count.format(Math.round(n / magnitude) * magnitude);
+}
+
+/** Launch length in plain words: 2 → "2 weeks", 8 → "2 months", 13 → "3 months". */
+export function formatDuration(weeks: number): string {
+  if (weeks < 4) return `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
+  const months = Math.round(weeks / (52 / 12));
+  return `${months} ${months === 1 ? "month" : "months"}`;
+}
+
+/** Money for prose and ranges, rounded to two significant figures: $4.89 → "$4.90", $1,681 → "$1,700". */
+export function formatApproxCurrency(n: number): string {
+  if (!Number.isFinite(n)) return "n/a";
+  if (n === 0) return "$0";
+  const magnitude = 10 ** (Math.floor(Math.log10(Math.abs(n))) - 1);
+  return formatCurrency(Math.round(n / magnitude) * magnitude);
+}
