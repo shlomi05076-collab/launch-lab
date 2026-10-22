@@ -64,7 +64,7 @@ export function ProductTypeReadout() {
               </div>
               <div>
                 <dt className="label">Chance to earn back the spend within a year</dt>
-                <dd className="figures text-lg">{formatPercent(result.probPaybackWithin12)}</dd>
+                <dd className="figures text-lg">{formatPercent(result.probPaybackWithin[12])}</dd>
               </div>
             </dl>
             <div className="overflow-x-auto">

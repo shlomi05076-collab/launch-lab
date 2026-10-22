@@ -1,5 +1,6 @@
 import type { ProductTypeTemplate } from "@/data/productTypes";
 import {
+  HORIZONS,
   type Requirement,
   type RequirementStatus,
   type ScenarioInput,
@@ -13,6 +14,7 @@ import {
   formatCurrency,
   formatDuration,
   formatOneIn,
+  formatPercent,
 } from "@/lib/format";
 
 /**
@@ -90,17 +92,44 @@ function whatWouldHaveToBeTrue(ctx: ViabilityCopyContext): string {
   }
 }
 
+/** "within a year", "within 2 years", "within 3 years". */
+export function horizonPhrase(months: number): string {
+  return months <= 12 ? "within a year" : `within ${Math.round(months / 12)} years`;
+}
+
+/** Below this chance of earning the spend back, the headline points to a way forward. */
+export const LOW_CHANCE = 0.25;
+
+function hoursPerWeek(scenario: ScenarioInput): number {
+  return Math.max(0, scenario.selfPromotion?.hoursPerWeek ?? 0);
+}
+
 /**
- * The one sentence that leads the guided results. Three variants:
- * too few customers to say much, above break-even, and short of break-even.
+ * The one sentence that leads the guided results. Never a verdict. Variants, in order:
+ * - only the founder's own promotion (no ad spend to earn back),
+ * - too few customers to say much,
+ * - above break-even,
+ * - a low chance of earning the spend back: honest, and pointing to a way forward,
+ * - short of break-even: what would have to be true for the input that matters most.
  */
 export function viabilityHeadline(ctx: ViabilityCopyContext): string {
   const { scenario, result, viability, template } = ctx;
-  const opening = `With ${formatCurrency(scenario.totalBudget)} over ${formatDuration(scenario.window.weeks)}`;
   const customers = template.customers;
+  const duration = formatDuration(scenario.window.weeks);
+  const hours = hoursPerWeek(scenario);
+  const horizon = horizonPhrase(viability.horizonMonths);
+  const range = customersRange(result);
 
+  if (viability.spend <= 0) {
+    const opening = `Promoting it yourself for ${hours} hours a week over ${duration}, you'd likely get ${range} ${customers}`;
+    return result.stages.paying.p50 < FEW_CUSTOMERS
+      ? `${opening}, too few to tell much. More hours, a longer push or a small ad budget would show more.`
+      : `${opening}, with no ad spend to earn back.`;
+  }
+
+  const opening = `With ${formatCurrency(scenario.totalBudget)} over ${duration}${hours > 0 ? " and your own promotion" : ""},`;
   if (result.stages.paying.p50 < FEW_CUSTOMERS) {
-    return `${opening} you'd likely get ${customersRange(result)} ${customers}, too few to tell much. Try a larger budget or a different way to reach people.`;
+    return `${opening} you'd likely get ${range} ${customers}, too few to tell much. Try a larger budget or a different way to reach people.`;
   }
 
   const needed =
@@ -109,15 +138,60 @@ export function viabilityHeadline(ctx: ViabilityCopyContext): string {
       : `about ${formatApproxCount(Math.ceil(viability.breakEvenCustomers))} ${customers}`;
 
   if (viability.aboveBreakEven) {
-    return `${opening} you'd likely get ${customersRange(result)} ${customers}; ${needed} would earn the spend back within a year, if results match ${template.similar}.`;
+    return `${opening} you'd likely get ${range} ${customers}; ${needed} would earn the spend back ${horizon}, if results match ${template.similar}.`;
   }
-  return `${opening} you'd likely get ${customersRange(result)} ${customers}. To earn that back within a year you'd need ${needed}${whatWouldHaveToBeTrue(ctx)}.`;
+
+  const chance = result.probPaybackWithin[viability.horizonMonths];
+  if (chance < LOW_CHANCE) {
+    const who = hours > 0 ? "that" : "paid ads alone";
+    const what = hours > 0 ? "the ad spend" : "the spend";
+    return `${opening} you'd likely get ${range} ${customers}, but ${who} probably won't earn back ${what} ${horizon}. Below: what would have to change, and how to test the riskiest part cheaply.`;
+  }
+  return `${opening} you'd likely get ${range} ${customers}. To earn that back ${horizon} you'd need ${needed}${whatWouldHaveToBeTrue(ctx)}.`;
+}
+
+/** "Within 1 year: 4% · within 2 years: 19% · within 3 years: 29%". */
+export function chanceByHorizon(result: SimulationResult): string {
+  return HORIZONS.map(
+    (h, i) =>
+      `${i === 0 ? "Within" : "within"} ${h / 12} ${h === 12 ? "year" : "years"}: ${formatPercent(result.probPaybackWithin[h])}`,
+  ).join(" · ");
+}
+
+/** One plain line on why longer horizons matter for this kind of product. */
+export function horizonNote(
+  scenario: ScenarioInput,
+  saasPaybackMonths: number,
+  audience: "business" | "people" = "business",
+): string {
+  if (scenario.pricing.model === "subscription" && audience === "people") {
+    return "Subscription businesses often take 1–2 years to earn back what they spend on marketing, and longer when the monthly price is low.";
+  }
+  return scenario.pricing.model === "subscription"
+    ? `Subscription businesses often take 1–2 years to earn back what they spend on marketing; the median business software company takes about ${saasPaybackMonths} months.`
+    : "One-time products earn it back through first orders and repeat purchases; years 2 and 3 assume customers keep buying again at the first-year pace.";
+}
+
+/** Customers from ads and from the founder's own promotion, kept apart. Null without the latter. */
+export function sourcesSplit(
+  scenario: ScenarioInput,
+  result: SimulationResult,
+  template: ProductTypeTemplate,
+): string | null {
+  if (!result.selfPromotion) return null;
+  const own = formatApproxCount(result.selfPromotion.paying.p50);
+  const total = result.stages.paying.p50;
+  const fromAds = formatApproxCount(Math.max(0, total - result.selfPromotion.paying.p50));
+  const time = `about ${formatApproxCount(result.selfPromotion.hours)} hours of your time and no money`;
+  return scenario.totalBudget > 0
+    ? `From ads: about ${fromAds} ${template.customers}. From your own promotion: about ${own}, for ${time}.`
+    : `From your own promotion: about ${own} ${template.customers}, for ${time}.`;
 }
 
 /** "at least …" for things that help when higher, "at most …" for costs and cancellations. */
 function neededText(req: Requirement, fmt: (x: number) => string): string {
-  if (req.needed === null) return "needed: not reachable";
-  if (req.input === "monthlyChurn" && req.needed >= 1) return "needed: no limit within a year";
+  if (req.needed === null) return "needed: not reachable on its own";
+  if (req.input === "monthlyChurn" && req.needed >= 1) return "needed: no limit";
   return `needed: ${req.betterWhen === "higher" ? "at least" : "at most"} ${fmt(req.needed)}`;
 }
 

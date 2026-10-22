@@ -3,11 +3,17 @@
  * See docs/model.md for the model in plain language.
  */
 export { uniquePeople } from "./channels";
-export { customerValue12m, paybackMonths } from "./economics";
+export { customerValue, MAX_HORIZON_MONTHS, paybackMonths } from "./economics";
 export type { LaunchOutcome, LaunchParams } from "./funnel";
-export { DEFAULT_RUNS, expectedLaunch, likelyParams, simulate } from "./monteCarlo";
+export {
+  DEFAULT_RUNS,
+  expectedLaunch,
+  hasSelfPromotion,
+  likelyParams,
+  simulate,
+} from "./monteCarlo";
 export { higherIsBetter, type OutcomeMetric, toOutcomeRange } from "./outcomes";
-export { CHANNEL_LABELS, netReturn12m, runSensitivity } from "./sensitivity";
+export { CHANNEL_LABELS, netReturn, runSensitivity } from "./sensitivity";
 export * from "./types";
 export {
   assessViability,

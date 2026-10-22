@@ -101,7 +101,7 @@ describe("simulation invariants (random scenarios)", () => {
           ...r.byChannel.flatMap((c) => [c.paying, c.cac]),
         ];
         for (const d of dists) expect(ordered(d), JSON.stringify(d)).toBe(true);
-        expect(r.probPaybackWithin12 + r.probNeverPayback).toBeLessThanOrEqual(1);
+        expect(r.probPaybackWithin[12] + r.probNeverPayback).toBeLessThanOrEqual(1);
       }),
       { numRuns: 40 },
     );

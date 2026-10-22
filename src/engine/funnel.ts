@@ -15,6 +15,8 @@ export type LaunchParams = {
   monthlyChurn: number;
   /** One-time pricing: purchases per customer in the first year (≥ 1). */
   purchasesPerYear: number;
+  /** Drawn only when the scenario includes the founder's own promotion. */
+  selfPromotion?: { impressionsPerHour: number; clickThroughRate: number };
 };
 
 export type LaunchOutcome = {
@@ -22,6 +24,8 @@ export type LaunchOutcome = {
   spend: number;
   channelSpend: number[];
   channelPaying: number[];
+  /** Paying customers who came from the founder's own promotion (0 without it). */
+  selfPromotionPaying: number;
   /** Cumulative paying customers at the end of each week. */
   weeklyPaying: Float64Array;
   /** Cumulative revenue at the end of each week. */
@@ -67,8 +71,21 @@ export function runLaunch(
   const channelSpend = shares.map((s) => s * input.totalBudget);
   const ramps = channels.map((c) => rampWeights(c.rampProfile, weeks));
 
+  // The founder's own promotion: hours a week turned into impressions. Effort compounds (followers
+  // and community trust build up), so its reach ramps up like content does. It costs no money.
+  const selfHours = Math.max(0, input.selfPromotion?.hoursPerWeek ?? 0);
+  const self = selfHours > 0 && params.selfPromotion ? params.selfPromotion : null;
+  const selfRamp = rampWeights("build", weeks);
+  const selfIntent = assumptions.selfPromotion?.intentMultiplier ?? 1;
+  const intents = [...channels.map((c) => c.intentMultiplier), selfIntent];
+  const clickRates = [
+    ...params.channels.map((c) => c.clickThroughRate),
+    self?.clickThroughRate ?? 0,
+  ];
+
   const stages: Record<Stage, number> = { reach: 0, visit: 0, signup: 0, activation: 0, paying: 0 };
   const channelPaying = channels.map(() => 0);
+  let selfPromotionPaying = 0;
   const newPaying = new Float64Array(weeks);
 
   let cumulativeImpressions = 0;
@@ -81,18 +98,22 @@ export function runLaunch(
     const costIndex = indexFor(assumptions.seasonality.cost, month);
     const demandIndex = indexFor(assumptions.seasonality.demand, month);
 
-    const weekImpressions = channels.map((_, i) =>
-      impressionsFor(
-        (channelSpend[i] as number) * (ramps[i]?.[week] as number),
-        (params.channels[i]?.costPerThousand as number) * costIndex,
+    // Paid channels first, then the founder's own promotion as the last source.
+    const weekImpressions = [
+      ...channels.map((_, i) =>
+        impressionsFor(
+          (channelSpend[i] as number) * (ramps[i]?.[week] as number),
+          (params.channels[i]?.costPerThousand as number) * costIndex,
+        ),
       ),
-    );
+      self ? selfHours * weeks * (selfRamp[week] as number) * self.impressionsPerHour : 0,
+    ];
     const totalImpressions = weekImpressions.reduce((a, b) => a + b, 0);
     if (totalImpressions <= 0) continue;
 
     // Every impression may produce a click; a person visits at most once.
     const weekClicks = weekImpressions.map(
-      (impressions, i) => impressions * (params.channels[i]?.clickThroughRate as number),
+      (impressions, i) => impressions * (clickRates[i] as number),
     );
     const totalClicks = weekClicks.reduce((a, b) => a + b, 0);
 
@@ -107,10 +128,10 @@ export function runLaunch(
     reachSoFar = reachNow;
     visitorsSoFar = visitorsNow;
 
-    channels.forEach((channel, i) => {
-      const reached = newReach * ((weekImpressions[i] as number) / totalImpressions);
+    weekImpressions.forEach((impressions, i) => {
+      const reached = newReach * (impressions / totalImpressions);
       const visits = totalClicks > 0 ? newVisitors * ((weekClicks[i] as number) / totalClicks) : 0;
-      const signupProbability = params.signupRate * channel.intentMultiplier * demandIndex;
+      const signupProbability = params.signupRate * (intents[i] as number) * demandIndex;
       const signups = binomial(visits, signupProbability, rng);
       const activations = binomial(signups, params.activationRate, rng);
       const paying = binomial(activations, params.paidConversion, rng);
@@ -120,7 +141,8 @@ export function runLaunch(
       stages.signup += signups;
       stages.activation += activations;
       stages.paying += paying;
-      channelPaying[i] = (channelPaying[i] as number) + paying;
+      if (i < channels.length) channelPaying[i] = (channelPaying[i] as number) + paying;
+      else selfPromotionPaying += paying;
       newPaying[week] = (newPaying[week] as number) + paying;
     });
   }
@@ -161,6 +183,7 @@ export function runLaunch(
     spend,
     channelSpend,
     channelPaying,
+    selfPromotionPaying,
     weeklyPaying,
     weeklyRevenue,
     revenue,

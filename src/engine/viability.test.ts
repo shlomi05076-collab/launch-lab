@@ -1,9 +1,9 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { customerValue12m, paybackMonths } from "./economics";
+import { customerValue, paybackMonths } from "./economics";
 import { runLaunch } from "./funnel";
 import { expectedLaunch, likelyParams } from "./monteCarlo";
-import { netReturn12m } from "./sensitivity";
+import { netReturn } from "./sensitivity";
 import type { ModelAssumptions, Range, ScenarioInput } from "./types";
 import {
   assessViability,
@@ -55,7 +55,7 @@ describe("break-even worked example", () => {
   const byInput = Object.fromEntries(v.requirements.map((r) => [r.input, r]));
 
   it("one customer is worth $163.28 in a year: $16 × (1 − 0.97^12) ÷ 0.03", () => {
-    expect(v.customerValue12m).toBeCloseTo(163.285, 2);
+    expect(v.customerValue).toBeCloseTo(163.285, 2);
   });
 
   it("needs 61.2 customers to earn back $10,000: 10,000 ÷ 163.28", () => {
@@ -88,7 +88,7 @@ describe("break-even worked example", () => {
     const base = likelyParams(scenario, assumptions);
     const atSignup = { ...base, signupRate: byInput.signupRate?.needed as number };
     const outcome = runLaunch(scenario, assumptions, atSignup, null);
-    expect(netReturn12m(outcome, scenario, atSignup)).toBeCloseTo(0, 4);
+    expect(netReturn(outcome, scenario, atSignup)).toBeCloseTo(0, 4);
   });
 });
 
@@ -101,15 +101,33 @@ describe("customer value and payback with repeat purchases", () => {
     purchasesPerYear: 1.6,
   };
 
-  it("values a one-time customer at margin × purchases in the first year", () => {
-    expect(customerValue12m(oneTime)).toBeCloseTo(80, 10); // $50 × 1.6
+  it("values a one-time customer at margin × purchases, at the first-year pace", () => {
+    expect(customerValue(oneTime)).toBeCloseTo(80, 10); // $50 × 1.6
+    expect(customerValue(oneTime, 24)).toBeCloseTo(110, 10); // $50 × (1 + 0.6 × 2)
+    expect(customerValue(oneTime, 36)).toBeCloseTo(140, 10); // $50 × (1 + 0.6 × 3)
   });
 
-  it("pays back part-way through the year from repeat purchases", () => {
+  it("values a subscriber over 1, 2 or 3 years with churn", () => {
+    const sub = {
+      price: 20,
+      grossMargin: 0.8,
+      model: "subscription" as const,
+      monthlyChurn: 0.03,
+      purchasesPerYear: 1,
+    };
+    expect(customerValue(sub, 12)).toBeCloseTo(163.285, 2); // $16 × (1 − 0.97^12) ÷ 0.03
+    expect(customerValue(sub, 24)).toBeCloseTo(276.57, 1); // $16 × (1 − 0.97^24) ÷ 0.03
+    expect(customerValue({ ...sub, monthlyChurn: 0 }, 36)).toBe(16 * 36);
+  });
+
+  it("pays back over time from repeat purchases, up to 3 years", () => {
     // First order earns $50 of a $65 CAC; repeats earn $30 a year = $2.50 a month → 6 months.
     expect(paybackMonths({ ...oneTime, cac: 65 })).toBeCloseTo(6, 10);
     expect(paybackMonths({ ...oneTime, cac: 40 })).toBe(0);
-    expect(paybackMonths({ ...oneTime, cac: 81 })).toBe(Number.POSITIVE_INFINITY);
+    // Beyond the first year, repeats continue at the same pace: (81 − 50) ÷ 2.50 = 12.4 months.
+    expect(paybackMonths({ ...oneTime, cac: 81 })).toBeCloseTo(12.4, 10);
+    // The model looks 3 years ahead at most: (141 − 50) ÷ 2.50 = 36.4 months → not within 3 years.
+    expect(paybackMonths({ ...oneTime, cac: 141 })).toBe(Number.POSITIVE_INFINITY);
     expect(paybackMonths({ ...oneTime, purchasesPerYear: 1, cac: 51 })).toBe(
       Number.POSITIVE_INFINITY,
     );
@@ -143,7 +161,7 @@ describe("customer value and payback with repeat purchases", () => {
             monthlyChurn,
             purchasesPerYear: 1,
           };
-          const coversCac = customerValue12m(e) >= cac * (1 + 1e-9);
+          const coversCac = customerValue(e) >= cac * (1 + 1e-9);
           const within12 = paybackMonths({ ...e, cac }) <= 12;
           if (coversCac) expect(within12).toBe(true);
         },
@@ -252,7 +270,7 @@ describe("viability invariants", () => {
         const signup = v.requirements.find((r) => r.input === "signupRate");
         if (signup?.needed && signup.needed > 0 && signup.needed < 1) {
           const p = { ...base, signupRate: signup.needed };
-          const net = netReturn12m(runLaunch(input, assumptions, p, null), input, p);
+          const net = netReturn(runLaunch(input, assumptions, p, null), input, p);
           expect(Math.abs(net)).toBeLessThan(input.totalBudget * 1e-6);
         }
       }),

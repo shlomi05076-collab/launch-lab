@@ -67,6 +67,16 @@ Each channel is credited with new visitors in proportion to the clicks it produc
 
 The first stage depends on the **channel** and the last three on the **product**, which makes the drop-off chart actionable. A leak at the top is a channel problem; a leak lower down is a product or onboarding problem.
 
+### Your own promotion (time, not money)
+
+A founder can also promote the product themselves: posts, communities, telling people they know. It's modeled as one more source of impressions in the same audience and on the same saturation curves:
+
+> impressions = hours a week × weeks × people reached per hour
+
+Reach builds up over the launch, like content does, because followers and community trust grow. Its visitors pass through the same funnel with their own click rate and intent.
+
+**The founder's hours are never converted into money.** The customers it brings count toward earning back the ad spend, because their revenue is real. The results show them separately ("From ads: … From your own promotion: …"). CAC from ads is computed from paid customers only.
+
 ### 5. Seasonality
 
 Each calendar month has two multipliers:
@@ -149,6 +159,12 @@ The guided flow answers "can my idea work, and what would have to be true?" with
 **1. What one customer is worth in a year.** The gross margin a customer earns in their first 12 months:
 - Subscription: g × (1 − (1 − c)¹²) ÷ c, where g = price × gross margin and c = monthly churn (12 × g with no churn).
 - One-time: price × gross margin × purchases in the first year.
+
+**Time horizon.** "Earn it back within" can be 1, 2 or 3 years (default 1); the guided results show all three chances side by side. Over *n* months:
+- Subscription: g × (1 − (1 − c)ⁿ) ÷ c.
+- One-time: margin × (1 + (purchases in the first year − 1) × years). This assumes customers keep buying again at the first-year pace, which is a labeled judgment and likely optimistic for years 2–3.
+
+Subscription businesses commonly take more than a year: the median B2B SaaS company takes about 16 months to earn back what it spends to win a customer (`benchmark.saasCacPaybackMonths`, below). That's why a 1-year view alone can look discouraging.
 
 **2. Customers needed to break even** = marketing spend ÷ what one customer is worth in a year. Break-even means the customers won during the launch **earn back the marketing spend within 12 months**. It covers marketing spend only, not the cost of building or running the product, and the results say so.
 
@@ -438,6 +454,24 @@ Each product type is a template behind the guided flow's "not sure" answers. B2B
 
 *Where sources disagree:* published agency retention runs from 70% to 92% a year, depending on agency size and service mix. The churn range covers retainers through PPC-heavy work. No published close rate for small service businesses was found, so the enquiry → call → client steps are explicit judgment and the first numbers a user should replace.
 
+### Your own promotion
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `selfPromotion.impressionsPerHour` | 50 / **400** / 1,500 people per hour | Launch Lab judgment, anchored on organic reach rates from [Socialinsider via MeetEdgar](https://meetedgar.com/blog/social-media-organic-reach-benchmarks) (Instagram posts reach ~3.2% of followers; small Facebook pages 4.35%) (2026) | An hour is a couple of posts or community replies, each seen by a few hundred people in a small network | Low |
+| `selfPromotion.clickThroughRate` | 0.5% / **1.5%** / 4% | Launch Lab judgment (2026-10) | A personal post or helpful reply earns more clicks than an ad, but most people scroll on | Low |
+| `selfPromotion.intentMultiplier` | ×1.2 | Launch Lab judgment (2026-10) | People who click a founder's own post or a community recommendation arrive with some trust | Low |
+
+*Where sources disagree:* no published benchmark converts a founder's hours into reach. Organic reach rates vary 10× between formats (0.5% for static posts, about 9% for short videos), and a single post in a large community can reach thousands. The range is deliberately wide, and all three values are the first a founder should replace with their own numbers after a week of trying.
+
+### Benchmarks quoted in copy
+
+| ID | Value | Source (date) | Why | Confidence |
+|---|---|---|---|---|
+| `benchmark.saasCacPaybackMonths` | 16 months | [Aleph × Benchmarkit](https://www.getaleph.com/answers/cac-payback-period-saas-2026), full-year 2025 data, 342 companies (median 16; top quartile ≤ 6; bottom ≥ 24) (2025) | Shows that earning back marketing in 1–2 years is normal for subscription businesses | Medium |
+
+*Where sources disagree:* Benchmarkit's 2024 report put the median at 18 months (SMB-focused companies 8–12); KeyBanc's older 2022 survey at about 23. The results quote the newest full-year median.
+
 ### Guided-flow defaults (estimates, not benchmarks)
 
 These answer "not sure" where no benchmark exists. Wherever they appear, they're labeled "rough estimate" or "example amount".
@@ -447,6 +481,7 @@ These answer "not sure" where no benchmark exists. Wherever they appear, they're
 | `guided.audienceBands` | Niche ~30,000 · specific group ~300,000 · broad market ~3,000,000 | Launch Lab estimate (2026-10) | Each band is 10× the last, enough to show how audience size changes the answer | Low |
 | `guided.exampleBudget` | $5,000 | Launch Lab example amount (2026-10) | No benchmark exists for the right launch budget, so it's labeled an example | Low |
 | `guided.promotionWeeks` | 8 weeks | Launch Lab example (2026-10) | Long enough for content to start ranking, short enough for a launch push | Low |
+| `guided.selfPromotionHours` | 3 hours a week | Launch Lab example (2026-10) | A realistic amount alongside a day job; shown as an example to change | Low |
 
 ---
 
@@ -474,7 +509,7 @@ Stated up front, because a model is only as credible as its known gaps.
 7. **Independent channel costs.** A crowded quarter raises all ad prices together. Seasonality captures the average effect, but not a bad-luck quarter that hits every channel at once.
 8. **US-weighted benchmarks.** Most sources are US or global averages from 2025–2026.
 9. **Break-even covers marketing spend only.** Building, hosting and running the product aren't included. The results say so next to every break-even number.
-10. **One-time products stop at year one.** Purchases after a customer's first year aren't counted, so long-lived stores and courses are understated.
+10. **Repeat purchases after year one are an assumption.** Years 2 and 3 assume customers keep buying at the first-year pace, which is likely optimistic, so treat 2- and 3-year chances for one-time products as an upper view.
 11. **Product-type templates are averages of very different businesses.** A niche store and a mass-market store share one template. Several template values (course and service funnels, service margin) have no published benchmark and are labeled as judgment.
 12. **"What would have to be true" changes one input at a time.** Real improvements often come in combination. A requirement marked "not reachable by changing this alone" may be reachable together with others, and expert mode is the place to try that.
 
@@ -488,6 +523,12 @@ Stated up front, because a model is only as credible as its known gaps.
 - **Regional seasonality and benchmarks:** EU and APEC indices alongside the US defaults.
 
 ## Changelog
+
+- **2026-10-23: M3.**
+  - "Earn it back within" 1, 2 or 3 years. Customer value and payback are computed per horizon. One-time payback now looks up to 3 years ahead instead of stopping at year one.
+  - The founder's own promotion, a time-based source, is kept separate from paid spend in the results.
+  - Sensitivity's net-return metric takes the horizon into account.
+  - Results without self-promotion are unchanged: its random draws only happen when it's used.
 
 - **2026-10-23: M2.**
   - Product-type templates for B2B software, consumer apps, online stores, digital products and services.

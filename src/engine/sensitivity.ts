@@ -1,5 +1,5 @@
 import { pert } from "./distributions";
-import { customerValue12m } from "./economics";
+import { customerValue } from "./economics";
 import { type LaunchOutcome, type LaunchParams, runLaunch } from "./funnel";
 import { likelyParams } from "./monteCarlo";
 import type {
@@ -36,19 +36,23 @@ type Probe = {
   ) => { input: ScenarioInput; params: LaunchParams };
 };
 
-/** Gross margin the launch's customers earn within 12 months, minus the marketing spend. */
-export function netReturn12m(
+/** Gross margin the launch's customers earn within the horizon, minus the marketing spend. */
+export function netReturn(
   outcome: LaunchOutcome,
   input: ScenarioInput,
   params: LaunchParams,
+  horizonMonths = 12,
 ): number {
-  const value = customerValue12m({
-    price: input.pricing.price,
-    grossMargin: input.pricing.grossMargin,
-    model: input.pricing.model,
-    monthlyChurn: params.monthlyChurn,
-    purchasesPerYear: params.purchasesPerYear,
-  });
+  const value = customerValue(
+    {
+      price: input.pricing.price,
+      grossMargin: input.pricing.grossMargin,
+      model: input.pricing.model,
+      monthlyChurn: params.monthlyChurn,
+      purchasesPerYear: params.purchasesPerYear,
+    },
+    horizonMonths,
+  );
   return outcome.stages.paying * value - outcome.spend;
 }
 
@@ -57,10 +61,11 @@ function metricOf(
   metric: SensitivityMetric,
   input: ScenarioInput,
   params: LaunchParams,
+  horizonMonths: number,
 ): number {
   if (metric === "paying") return outcome.stages.paying;
   if (metric === "revenue") return outcome.revenue;
-  if (metric === "netReturn12m") return netReturn12m(outcome, input, params);
+  if (metric === "netReturn") return netReturn(outcome, input, params, horizonMonths);
   return outcome.cac;
 }
 
@@ -102,6 +107,30 @@ function probes(input: ScenarioInput, assumptions: ModelAssumptions): Probe[] {
       });
     }
   });
+
+  if ((input.selfPromotion?.hoursPerWeek ?? 0) > 0 && assumptions.selfPromotion) {
+    const own = assumptions.selfPromotion;
+    for (const key of ["impressionsPerHour", "clickThroughRate"] as const) {
+      list.push({
+        input: `selfPromotion.${key}`,
+        label: `Your own promotion: ${key === "impressionsPerHour" ? "people reached per hour" : "click-through rate"}`,
+        ...plausibleSwing(own[key]),
+        apply: (value, inp, params) => ({
+          input: inp,
+          params: {
+            ...params,
+            selfPromotion: {
+              impressionsPerHour:
+                params.selfPromotion?.impressionsPerHour ?? own.impressionsPerHour.likely,
+              clickThroughRate:
+                params.selfPromotion?.clickThroughRate ?? own.clickThroughRate.likely,
+              [key]: value,
+            },
+          },
+        }),
+      });
+    }
+  }
 
   if (input.pricing.model === "subscription" && input.pricing.monthlyChurn) {
     list.push({
@@ -162,10 +191,12 @@ export function runSensitivity(
   input: ScenarioInput,
   assumptions: ModelAssumptions,
   metric: SensitivityMetric = "paying",
+  options: { horizonMonths?: number } = {},
 ): SensitivityResult {
+  const horizonMonths = options.horizonMonths ?? 12;
   const base = likelyParams(input, assumptions);
   const evaluate = (inp: ScenarioInput, params: LaunchParams) =>
-    metricOf(runLaunch(inp, assumptions, params, null), metric, inp, params);
+    metricOf(runLaunch(inp, assumptions, params, null), metric, inp, params, horizonMonths);
   const baseline = evaluate(input, base);
 
   const bars: SensitivityBar[] = probes(input, assumptions).map((probe) => {

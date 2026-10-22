@@ -16,19 +16,25 @@ export type CustomerEconomics = {
   purchasesPerYear: number;
 };
 
+/** The longest "earn it back within" horizon the model reports (3 years). */
+export const MAX_HORIZON_MONTHS = 36;
+
 /**
- * Gross margin one customer earns in their first 12 months: what they're worth for the
+ * Gross margin one customer earns in their first `months`: what they're worth for the
  * break-even test.
- * - Subscription: g·(1 − (1−c)^12) / c with g = price × margin (12·g without churn).
- * - One-time: price × margin × purchases in the first year.
+ * - Subscription: g·(1 − (1−c)^n) / c with g = price × margin and n = months (n·g without churn).
+ * - One-time: price × margin × (1 + (purchases per year − 1) × years). Repeat purchases after the
+ *   first year are assumed to continue at the first-year pace (a labeled judgment, docs/model.md).
  */
-export function customerValue12m(e: CustomerEconomics): number {
+export function customerValue(e: CustomerEconomics, months = 12): number {
   const margin = e.price * e.grossMargin;
-  if (e.model === "one_time") return margin * Math.max(1, e.purchasesPerYear);
+  if (e.model === "one_time") {
+    return margin * (1 + (Math.max(1, e.purchasesPerYear) - 1) * (months / 12));
+  }
   const c = Math.min(1, Math.max(0, e.monthlyChurn));
-  if (c === 0) return 12 * margin;
-  // -expm1(12·log1p(−c)) = 1 − (1−c)^12, precise for tiny churn.
-  return (margin * -Math.expm1(12 * Math.log1p(-c))) / c;
+  if (c === 0) return months * margin;
+  // -expm1(n·log1p(−c)) = 1 − (1−c)^n, precise for tiny churn.
+  return (margin * -Math.expm1(months * Math.log1p(-c))) / c;
 }
 
 /**
@@ -41,9 +47,8 @@ export function customerValue12m(e: CustomerEconomics): number {
  * With c = 0 this reduces to CAC / g.
  *
  * One-time: the first purchase pays back immediately (0 months) if its margin covers CAC.
- * Otherwise repeat purchases, spread evenly over the first year, pay it back part-way through
- * that year. Purchases beyond the first year aren't modeled, so if the first year's purchases
- * don't cover CAC the result is Infinity ("not within the first year").
+ * Otherwise repeat purchases, spread evenly at the first-year pace, pay it back over time. The
+ * model looks at most 3 years ahead, so anything slower is Infinity ("not within 3 years").
  */
 export function paybackMonths(args: CustomerEconomics & { cac: number }): number {
   const { price, grossMargin, model, monthlyChurn } = args;
@@ -56,7 +61,7 @@ export function paybackMonths(args: CustomerEconomics & { cac: number }): number
     const repeatMarginPerMonth = (margin * (Math.max(1, args.purchasesPerYear) - 1)) / 12;
     if (repeatMarginPerMonth <= 0) return Number.POSITIVE_INFINITY;
     const months = (args.cac - margin) / repeatMarginPerMonth;
-    return months <= 12 ? months : Number.POSITIVE_INFINITY;
+    return months <= MAX_HORIZON_MONTHS ? months : Number.POSITIVE_INFINITY;
   }
 
   if (monthlyChurn <= 0) return args.cac / margin;

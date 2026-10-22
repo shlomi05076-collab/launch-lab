@@ -19,6 +19,7 @@ describe("format", () => {
   it("shows money in dollars, with cents under $10", () => {
     expect(formatCurrency(1234.4)).toBe("$1,234");
     expect(formatCurrency(4.5)).toBe("$4.50");
+    expect(formatCurrency(9)).toBe("$9");
     expect(formatCurrency(Number.POSITIVE_INFINITY)).toBe("n/a");
   });
 

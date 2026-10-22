@@ -24,6 +24,8 @@ export type ProductTypeTemplate = {
   customers: string;
   /** Row labels for "what would have to be true". */
   labels: { signup: string; paying: string };
+  /** Funnel stages in plain words, for "where people drop off". */
+  stageNames: { signup: string; activation: string; paying: string };
   /** Plain-language funnel steps, e.g. "install the app" (never "convert"). */
   steps: {
     /** Visitor → sign-up stage, as a verb phrase after "would have to …". */
@@ -55,6 +57,11 @@ const DECIDED = "2026-10";
 export const productTypes: Record<ProductType, ProductTypeTemplate> = {
   b2b_software: {
     id: "b2b_software",
+    stageNames: {
+      signup: "Signed up for a trial",
+      activation: "Started using it",
+      paying: "Became paying customers",
+    },
     customers: "customers",
     labels: {
       signup: "Visitors who sign up for a trial",
@@ -108,6 +115,11 @@ export const productTypes: Record<ProductType, ProductTypeTemplate> = {
 
   consumer_app: {
     id: "consumer_app",
+    stageNames: {
+      signup: "Installed the app",
+      activation: "Started a trial",
+      paying: "Became paying subscribers",
+    },
     customers: "customers",
     labels: {
       signup: "Visitors who install the app",
@@ -208,6 +220,7 @@ export const productTypes: Record<ProductType, ProductTypeTemplate> = {
 
   online_store: {
     id: "online_store",
+    stageNames: { signup: "Added to cart", activation: "Started checkout", paying: "Ordered" },
     customers: "customers",
     labels: {
       signup: "Visitors who add something to their cart",
@@ -307,6 +320,11 @@ export const productTypes: Record<ProductType, ProductTypeTemplate> = {
 
   digital_product: {
     id: "digital_product",
+    stageNames: {
+      signup: "Joined your email list",
+      activation: "Read your sales page",
+      paying: "Bought",
+    },
     customers: "customers",
     labels: { signup: "Visitors who join your email list", paying: "Email subscribers who buy" },
     audience: "people",
@@ -394,6 +412,11 @@ export const productTypes: Record<ProductType, ProductTypeTemplate> = {
 
   service: {
     id: "service",
+    stageNames: {
+      signup: "Got in touch",
+      activation: "Had a call with you",
+      paying: "Became clients",
+    },
     customers: "clients",
     labels: { signup: "Visitors who get in touch", paying: "Enquiries that turn into clients" },
     audience: "business",

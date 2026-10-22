@@ -40,6 +40,54 @@ export const marketCorrelation: Assumption<number> = {
   confidence: "low",
 };
 
+/* ---------- The founder's own promotion ---------- */
+
+export const selfPromotionReach: Assumption<Range> = {
+  id: "selfPromotion.impressionsPerHour",
+  label: "Your own promotion: people reached per hour",
+  value: { low: 50, likely: 400, high: 1500 },
+  source:
+    "Launch Lab judgment, anchored on organic reach rates (Socialinsider: Instagram posts reach ~3.2% of followers; small Facebook pages 4.35%)",
+  sourceUrl: "https://meetedgar.com/blog/social-media-organic-reach-benchmarks",
+  asOf: "2026",
+  why: "An hour is a couple of posts or community replies, each seen by a few hundred people in a small network.",
+  confidence: "low",
+};
+
+export const selfPromotionClickRate: Assumption<Range> = {
+  id: "selfPromotion.clickThroughRate",
+  label: "Your own promotion: click-through rate",
+  value: { low: 0.005, likely: 0.015, high: 0.04 },
+  source: "Launch Lab judgment (no published benchmark for founder posts and community replies)",
+  asOf: "2026-10",
+  why: "A personal post or helpful reply earns more clicks than an ad, but most people scroll on.",
+  confidence: "low",
+};
+
+export const selfPromotionIntent: Assumption<number> = {
+  id: "selfPromotion.intentMultiplier",
+  label: "Your own promotion: intent multiplier",
+  value: 1.2,
+  source: "Launch Lab judgment",
+  asOf: "2026-10",
+  why: "People who click a founder's own post or a community recommendation arrive with some trust.",
+  confidence: "low",
+};
+
+/* ---------- Benchmarks quoted in copy ---------- */
+
+export const saasCacPaybackMonths: Assumption<number> = {
+  id: "benchmark.saasCacPaybackMonths",
+  label: "Median months for B2B SaaS to earn back customer acquisition cost",
+  value: 16,
+  source:
+    "Aleph × Benchmarkit, full-year 2025 data, 342 companies (median 16 months; top quartile ≤ 6, bottom ≥ 24)",
+  sourceUrl: "https://www.getaleph.com/answers/cac-payback-period-saas-2026",
+  asOf: "2025",
+  why: "Shows that earning back marketing in 1–2 years is normal for subscription businesses.",
+  confidence: "medium",
+};
+
 /* ---------- Product funnel and economics (sample defaults) ---------- */
 
 export const signupRate: Assumption<Range> = {
@@ -104,6 +152,10 @@ export const grossMargin: Assumption<number> = {
 
 /** Every default assumption, for the docs coverage test and the future assumptions drawer. */
 export const modelAssumptionRecords: Assumption<unknown>[] = [
+  selfPromotionReach,
+  selfPromotionClickRate,
+  selfPromotionIntent,
+  saasCacPaybackMonths,
   seasonalityCost,
   seasonalityDemand,
   marketCorrelation,
@@ -122,5 +174,10 @@ export function defaultModelAssumptions(audience: Audience = "business"): ModelA
     ) as ModelAssumptions["channels"],
     seasonality: { cost: seasonalityCost.value, demand: seasonalityDemand.value },
     marketCorrelation: marketCorrelation.value,
+    selfPromotion: {
+      impressionsPerHour: selfPromotionReach.value,
+      clickThroughRate: selfPromotionClickRate.value,
+      intentMultiplier: selfPromotionIntent.value,
+    },
   };
 }

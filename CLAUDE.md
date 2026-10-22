@@ -16,7 +16,7 @@ The primary persona is **Omer, 27**: he has an idea and some savings and has nev
 
 ## Status
 
-Current milestone: **M3 – "Test my idea" guided flow** (see [Milestones](#milestones)). Update this line when a milestone ships.
+Current milestone: **M4 – Expert mode** (see [Milestones](#milestones)). Update this line when a milestone ships.
 
 - **Live:** https://launch-lab-phi.vercel.app (Vercel Hobby, auto-deploys every push to `main`)
 - **Repo:** https://github.com/shlomi05076-collab/launch-lab (public). Commits use the noreply email set in the repo-local git config. Keep it that way.
@@ -64,6 +64,7 @@ Current milestone: **M3 – "Test my idea" guided flow** (see [Milestones](#mile
 | Analytics | Vercel Web Analytics (page views) + a custom-event provider behind `lib/analytics.ts` | Cookieless. **Open decision for M5:** Vercel custom events need the Pro plan, so on Hobby use a free cookieless provider (candidate: Umami Cloud; verify its free tier first) or accept page views only |
 | Fonts | `next/font` (self-hosted Google Fonts) | No layout shift and no third-party font requests |
 | Unit tests | Vitest + fast-check | Fast TS-native tests; property tests check model invariants |
+| Screenshots | `playwright-core` driving the installed Edge (`scripts/screenshots.mjs`) | Repeatable walkthrough captures with no browser download; reused for the README |
 | E2E tests | Playwright (one smoke suite) | Proves load → simulate → share → open report works on desktop and mobile |
 | Lint/format | Biome | One fast tool for both |
 | CI | GitHub Actions | Typecheck, lint, test and build on every push; Vercel deploys |
@@ -123,7 +124,8 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
 │  ├─ model.md                  # how the simulation works; every assumption with source + date
 │  ├─ metrics.md                # analytics events, properties, funnel, north star definition
 │  └─ decisions/                # short ADRs (001-url-state.md, 002-pert-distributions.md, …)
-├─ e2e/                         # Playwright smoke tests
+├─ e2e/                         # Playwright smoke tests (M7)
+├─ scripts/screenshots.mjs      # clicks through the guided flow in Edge; desktop + mobile, light + dark
 ├─ public/
 └─ src/
    ├─ app/
@@ -131,6 +133,8 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
    │  ├─ globals.css            # design tokens (light + dark) and Tailwind @theme
    │  ├─ page.tsx               # landing: "Test my idea" (primary) · "See an example" (Briefly)
    │  ├─ idea/page.tsx          # guided "Test my idea" flow + viability results
+   │  ├─ idea/example/page.tsx  # "See an example": Briefly as a guided result
+   │  ├─ how-it-works/page.tsx  # short plain-language explanation of the model
    │  ├─ lab/page.tsx           # expert mode: full editor + results + compare workspace
    │  ├─ report/page.tsx        # read-only shared report (?s=<encoded>)
    │  ├─ report/opengraph-image.tsx  # dynamic share preview card
@@ -167,13 +171,15 @@ Before saying a task is done: `pnpm typecheck && pnpm lint && pnpm test` must pa
    │  ├─ scenario.ts            # Zod schemas (inputs to the engine)
    │  ├─ migrations.ts
    │  └─ share.ts               # encode/decode share URL
+   ├─ guided/                   # PURE. answers (Zod schema), toScenario, summary, provenance, analyze (+ tests)
    ├─ workers/simulation.worker.ts
-   ├─ hooks/useSimulation.ts
-   ├─ store/scenarios.ts        # Zustand: guided draft, saved scenarios (rename/duplicate/delete), compare set
+   ├─ hooks/useIdeaAnalysis.ts  # debounced worker calls, stale results dropped
+   ├─ store/idea.ts             # Zustand: the guided draft + step, autosaved, re-validated on load
+   ├─ store/scenarios.ts        # (M5) saved scenarios (rename/duplicate/delete), compare set
    ├─ components/
    │  ├─ layout/                # SiteHeader, SiteFooter
    │  ├─ ui/                    # Button, NumberField, Slider, Segmented, Tooltip, ThemeToggle, AssumptionMarker, Disclaimer
-   │  ├─ idea/                  # QuestionStep, AnswerSummary, ViabilityHeadline, BreakEvenGauge, MustBeTrue, Glossary
+   │  ├─ idea/                  # IdeaFlow, QuestionShell, steps/*, results/* (KeyNumbers, BreakEvenGauge, MustBeTrue, CheapTestCard, DropOff, Glossary)
    │  ├─ charts/                # FunnelChart, RangeBar, TornadoChart, Timeline, Histogram
    │  ├─ scenario/              # ScenarioEditor, ChannelMix, PricingInput, WindowInput
    │  ├─ results/               # InsightHeadline, KpiReadout, DropOffPanel
@@ -280,7 +286,7 @@ Each milestone is deployed to the public Vercel URL, works on its own, and ends 
   - `src/insights/` viability headline (three variants) plus the banned-verdict-words test.
   - `lib/glossary.ts`, and "1 in N" formatting.
   - *Ships:* `/lab` readout showing, for each product type's example, the viability sentence and the "what would have to be true" table.
-- [ ] **M3 – "Test my idea" guided flow.** Per `docs/test-my-idea.md`.
+- [x] **M3 – "Test my idea" guided flow.** *(Shipped 2026-10-23, tag `m3`.)* Per `docs/test-my-idea.md`, plus earn-it-back horizons (1/2/3 years), "I'll promote it myself" (time, not money) and the low-chance "way forward" headline.
   - Landing page with **Test my idea** (primary) and **See an example** (Briefly).
   - 7 plain questions with "not sure" everywhere (including the "businesses or people?" follow-up and purchases per year for one-time products), and an answer summary.
   - Results screen: headline, disclaimer, three numbers (including "Chance to earn back the spend within a year"), break-even gauge, "what would have to be true" with the "matters most" accent, **"How to test this cheaply"**, plain drop-off, glossary, actions.
@@ -332,4 +338,7 @@ Record significant decisions here (one line each) and write an ADR in `docs/deci
 - 2026-10-22: Cookieless product analytics in M5. Vercel Web Analytics custom events are Pro-only (checked 2026-10-22), so provider TBD.
 - 2026-10-23: M2 sources: each product type is sourced where data exists and labeled "Launch Lab judgment" where it doesn't. Course and service funnels and the service margin are the thinnest; see docs/model.md.
 - 2026-10-23: Guided "matters most" ranks inputs by net return within a year, not by paying customers, so price, churn and repeat purchases can surface.
+- 2026-10-23: M3: "Earn it back within" 1/2/3 years (default 1; all three chances shown). One-time payback now looks up to 3 years ahead, with repeats after year one at the first-year pace (labeled judgment).
+- 2026-10-23: M3: "I'll promote it myself" is a time-based source. Hours are never converted into money; its customers count toward earning back ad spend but are shown separately, and ad CAC uses paid customers only.
+- 2026-10-23: M3: below a 25% chance, the headline points to a way forward ("paid ads alone probably won't…; below: what would have to change, and how to test the riskiest part cheaply").
 - 2026-10-22: **Repositioned for anyone with a product idea.** New primary persona Omer (first-time founder, no marketing or finance background) and hypothesis H6 (explaining what must be true beats a pass/fail verdict). Guided "Test my idea" flow is the main entry point; the full lab becomes expert mode. Product-type templates with sourced defaults, browser-saved scenarios, and a disclaimer on every result. Milestones re-planned as M2–M7.

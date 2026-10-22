@@ -35,8 +35,19 @@ export const promotionWeeks: Assumption<number> = {
   confidence: "low",
 };
 
+export const selfPromotionHours: Assumption<number> = {
+  id: "guided.selfPromotionHours",
+  label: "Hours a week of your own promotion, if you're not sure",
+  value: 3,
+  source: "Launch Lab example (no benchmark exists)",
+  asOf: "2026-10",
+  why: "A realistic amount alongside a day job; shown as an example to change.",
+  confidence: "low",
+};
+
 export const guidedAssumptionRecords: Assumption<unknown>[] = [
   audienceBands,
   exampleBudget,
   promotionWeeks,
+  selfPromotionHours,
 ];

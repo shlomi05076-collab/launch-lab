@@ -11,9 +11,14 @@ import {
 } from "@/engine";
 import { glossary, glossaryFor } from "@/lib/glossary";
 import {
+  chanceByHorizon,
   describeRequirement,
   FEW_CUSTOMERS,
+  horizonNote,
+  horizonPhrase,
+  LOW_CHANCE,
   STATUS_LABELS,
+  sourcesSplit,
   type ViabilityCopyContext,
   viabilityHeadline,
 } from "./viability";
@@ -154,7 +159,12 @@ describe("glossary", () => {
 });
 
 describe("every 'what would have to be true' clause", () => {
-  const base = context("b2b_software");
+  // A moderate chance, so the headline names the requirement instead of the low-chance variant.
+  const b2b = context("b2b_software");
+  const base = {
+    ...b2b,
+    result: { ...b2b.result, probPaybackWithin: { 12: 0.4, 24: 0.6, 36: 0.7 } },
+  };
   const inputs = [
     "signupRate",
     "payingRate",
@@ -203,5 +213,94 @@ describe("every 'what would have to be true' clause", () => {
       viability: { ...base.viability, aboveBreakEven: false, mattersMost: null },
     };
     expect(viabilityHeadline(ctx)).toMatch(/would have to beat what similar software tools/);
+  });
+});
+
+describe("headline variants added in M3", () => {
+  it("points to a way forward when the chance is low, without a verdict", () => {
+    const ctx = context("consumer_app");
+    expect(ctx.result.probPaybackWithin[12]).toBeLessThan(LOW_CHANCE);
+    const headline = viabilityHeadline(ctx);
+    expect(headline).toMatch(/paid ads alone probably won't earn back the spend within a year\./);
+    expect(headline).toMatch(
+      /Below: what would have to change, and how to test the riskiest part cheaply\.$/,
+    );
+    expect(headline).not.toMatch(BANNED);
+  });
+
+  it("names the horizon the user picked", () => {
+    const template = productTypes.service;
+    const scenario = exampleScenario("service");
+    const assumptions = defaultModelAssumptions(template.audience);
+    const ctx: ViabilityCopyContext = {
+      scenario,
+      template,
+      result: simulate(scenario, assumptions, { runs: RUNS }),
+      viability: assessViability(scenario, assumptions, { horizonMonths: 24 }),
+    };
+    expect(viabilityHeadline(ctx)).toMatch(/earn the spend back within 2 years/);
+    expect(horizonPhrase(12)).toBe("within a year");
+    expect(horizonPhrase(36)).toBe("within 3 years");
+  });
+
+  it("covers launches promoted only by the founder, with no ad spend", () => {
+    const base = exampleScenario("online_store");
+    const ctx = context("online_store", {
+      totalBudget: 0,
+      channels: [],
+      selfPromotion: { hoursPerWeek: 10 },
+      window: { ...base.window, weeks: 13 },
+    });
+    const headline = viabilityHeadline(ctx);
+    expect(headline).toMatch(
+      /^Promoting it yourself for 10 hours a week over 3 months, you'd likely get/,
+    );
+    expect(headline).not.toMatch(BANNED);
+    expect(sourcesSplit(ctx.scenario, ctx.result, ctx.template)).toMatch(
+      /^From your own promotion: about \d+ customers, for about 130 hours of your time and no money\.$/,
+    );
+  });
+
+  it("keeps customers from ads and from your own promotion apart", () => {
+    const ctx = context("online_store", { selfPromotion: { hoursPerWeek: 5 } });
+    expect(viabilityHeadline(ctx)).toMatch(/^With \$5,000 over 2 months and your own promotion/);
+    expect(sourcesSplit(ctx.scenario, ctx.result, ctx.template)).toMatch(
+      /^From ads: about \d+ customers\. From your own promotion: about \d+, for about 40 hours/,
+    );
+    expect(
+      sourcesSplit(
+        context("online_store").scenario,
+        context("online_store").result,
+        productTypes.online_store,
+      ),
+    ).toBeNull();
+  });
+
+  it("lists the chance for each horizon and explains why longer ones matter", () => {
+    const ctx = context("b2b_software");
+    expect(chanceByHorizon(ctx.result)).toMatch(
+      /^Within 1 year: \d+% · within 2 years: \d+% · within 3 years: \d+%$/,
+    );
+    expect(horizonNote(ctx.scenario, 16)).toMatch(/often take 1–2 years.*about 16 months\.$/);
+    expect(horizonNote(exampleScenario("online_store"), 16)).toMatch(/first-year pace\.$/);
+  });
+});
+
+describe("walkthrough fixes (M3)", () => {
+  it("doesn't repeat 'your own promotion' when the chance is low", () => {
+    const ctx = context("consumer_app", { selfPromotion: { hoursPerWeek: 4 } });
+    const headline = viabilityHeadline(ctx);
+    expect(headline).toMatch(
+      /and your own promotion, you'd likely get .+, but that probably won't earn back the ad spend within a year\./,
+    );
+    expect(headline.match(/your own promotion/g)).toHaveLength(1);
+  });
+
+  it("quotes the business-software payback median only for business products", () => {
+    const app = exampleScenario("consumer_app");
+    expect(horizonNote(app, 16, "people")).not.toMatch(/business software/);
+    expect(horizonNote(app, 16, "business")).toMatch(
+      /business software company takes about 16 months/,
+    );
   });
 });

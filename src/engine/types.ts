@@ -44,6 +44,13 @@ export type ModelAssumptions = {
     /** Multiplies the sign-up rate in that month (buyer responsiveness). */
     demand: MonthlyIndex;
   };
+  /** The founder's own promotion (posts, communities, word of mouth). Costs time, not money. */
+  selfPromotion?: {
+    /** People an hour of the founder's promotion puts the product in front of. */
+    impressionsPerHour: Range;
+    clickThroughRate: Range;
+    intentMultiplier: number;
+  };
   /**
    * Pairwise correlation (0–1) between the three product rates within one simulated launch.
    * 0 = independent; 0.5 = "moderate" shared market response.
@@ -87,13 +94,15 @@ export type ScenarioInput = {
      */
     purchasesPerYear?: Range;
   };
-  /** 1–4 channels. Shares are normalised to sum to 1. */
+  /** 0–4 paid channels (0 only alongside self-promotion). Shares are normalised to sum to 1. */
   channels: Array<{
     channel: ChannelId;
     budgetShare: number;
     overrides?: Partial<ChannelAssumptions>;
   }>;
   window: { startMonth: Month; weeks: number };
+  /** The founder promoting it themselves. Hours are never converted into money. */
+  selfPromotion?: { hoursPerWeek: number };
   /** Product-level funnel rates. */
   funnel: { signupRate: Range; activationRate: Range; paidConversion: Range };
 };
@@ -124,16 +133,26 @@ export type SimulationResult = {
   cac: Dist;
   /** Months for one customer's gross margin to repay CAC. Infinity = never. */
   paybackMonths: Dist;
-  probPaybackWithin12: number;
+  /** Share of simulated launches whose customers earn back the spend within 12, 24, 36 months. */
+  probPaybackWithin: Record<HorizonMonths, number>;
+  /** Paid spend ÷ customers from paid channels only (the founder's own promotion excluded). */
+  paidCac: Dist;
+  /** Customers from the founder's own promotion, and the hours it took. Null without it. */
+  selfPromotion: { hours: number; paying: Dist } | null;
   probNeverPayback: number;
   histogram: { metric: "paying"; bins: Array<{ x0: number; x1: number; count: number }> };
 };
 
+/** "Earn it back within": 1, 2 or 3 years. */
+export const HORIZONS = [12, 24, 36] as const;
+export type HorizonMonths = (typeof HORIZONS)[number];
+
 /**
- * netReturn12m: gross margin the launch's customers earn within 12 months, minus the marketing
- * spend. Unlike `paying`, it moves with price, churn and repeat purchases.
+ * netReturn: gross margin the launch's customers earn within the horizon (12 months unless
+ * stated), minus the marketing spend. Unlike `paying`, it moves with price, churn and repeat
+ * purchases.
  */
-export type SensitivityMetric = "paying" | "revenue" | "cac" | "netReturn12m";
+export type SensitivityMetric = "paying" | "revenue" | "cac" | "netReturn";
 
 export type SensitivityBar = {
   /** Stable key, e.g. "funnel.signupRate" or "channel.paid_social.costPerThousand". */

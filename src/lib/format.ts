@@ -18,10 +18,11 @@ export function formatCount(n: number): string {
   return Number.isFinite(n) ? count.format(Math.round(n)) : "–";
 }
 
-/** Money: $1,234, or $4.50 under $10. Infinity (no customers acquired) shows as "n/a". */
+/** Money: $1,234; $4.50 under $10, but $3 rather than $3.00. Infinity shows as "n/a". */
 export function formatCurrency(n: number): string {
   if (!Number.isFinite(n)) return "n/a";
-  return Math.abs(n) < 10 ? cents.format(n) : dollars.format(n);
+  const wholeDollars = Math.abs(n - Math.round(n)) < 0.005;
+  return Math.abs(n) < 10 && !wholeDollars ? cents.format(n) : dollars.format(n);
 }
 
 /** Payback period: "9.5 mo", "> 36 mo", or "never" when CAC exceeds lifetime value. */

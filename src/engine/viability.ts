@@ -1,9 +1,9 @@
 import { pert } from "./distributions";
-import { customerValue12m } from "./economics";
+import { customerValue } from "./economics";
 import { type LaunchParams, resolveChannels, runLaunch } from "./funnel";
 import { likelyParams } from "./monteCarlo";
-import { netReturn12m, runSensitivity } from "./sensitivity";
-import type { ModelAssumptions, Range, ScenarioInput } from "./types";
+import { netReturn, runSensitivity } from "./sensitivity";
+import type { HorizonMonths, ModelAssumptions, Range, ScenarioInput } from "./types";
 
 /**
  * Viability: "what would have to be true" for the launch's customers to earn back the marketing
@@ -44,21 +44,27 @@ export type Requirement = {
 
 export type Viability = {
   spend: number;
-  /** Gross margin one customer earns in their first 12 months, at current values. */
-  customerValue12m: number;
-  /** Customers needed to earn back the spend within 12 months. */
+  /** Months the spend has to be earned back within (12, 24 or 36). */
+  horizonMonths: HorizonMonths;
+  /** Gross margin one customer earns within the horizon, at current values. */
+  customerValue: number;
+  /** Customers needed to earn back the spend within the horizon. */
   breakEvenCustomers: number;
   /** Paying customers in the all-likely, no-randomness launch. */
   expectedCustomers: number;
   aboveBreakEven: boolean;
   requirements: Requirement[];
-  /** The requirement behind the largest swing in 12-month net return, if any. */
+  /** The requirement behind the largest swing in net return, if any. */
   mattersMost: RequirementInput | null;
+  /** Requirements in order of how much they move net return (sensitivity order, no repeats). */
+  ranking: RequirementInput[];
 };
 
 export type ViabilityOptions = {
   /** What similar products charge. Without it, price is compared only with itself. */
   typicalPrice?: Range;
+  /** Earn it back within 12 (default), 24 or 36 months. */
+  horizonMonths?: HorizonMonths;
 };
 
 const ONCE: Range = { low: 1, likely: 1, high: 1 };
@@ -145,18 +151,22 @@ export function assessViability(
   assumptions: ModelAssumptions,
   options: ViabilityOptions = {},
 ): Viability {
+  const horizonMonths = options.horizonMonths ?? 12;
   const base = likelyParams(input, assumptions);
   const net = (inp: ScenarioInput, params: LaunchParams) =>
-    netReturn12m(runLaunch(inp, assumptions, params, null), inp, params);
+    netReturn(runLaunch(inp, assumptions, params, null), inp, params, horizonMonths);
 
   const outcome = runLaunch(input, assumptions, base, null);
-  const value = customerValue12m({
-    price: input.pricing.price,
-    grossMargin: input.pricing.grossMargin,
-    model: input.pricing.model,
-    monthlyChurn: base.monthlyChurn,
-    purchasesPerYear: base.purchasesPerYear,
-  });
+  const value = customerValue(
+    {
+      price: input.pricing.price,
+      grossMargin: input.pricing.grossMargin,
+      model: input.pricing.model,
+      monthlyChurn: base.monthlyChurn,
+      purchasesPerYear: base.purchasesPerYear,
+    },
+    horizonMonths,
+  );
   const spend = outcome.spend;
   const breakEvenCustomers = value > 0 ? spend / value : Number.POSITIVE_INFINITY;
   const expectedCustomers = outcome.stages.paying;
@@ -305,20 +315,27 @@ export function assessViability(
     }
   }
 
-  const bars = spend > 0 ? runSensitivity(input, assumptions, "netReturn12m").bars : [];
-  const mattersMost =
-    bars
-      .filter((b) => b.swing > 0)
-      .map((b) => requirementForSensitivityInput(b.input))
-      .find((r): r is RequirementInput => r !== null) ?? null;
+  const bars =
+    spend > 0 ? runSensitivity(input, assumptions, "netReturn", { horizonMonths }).bars : [];
+  const ranking = [
+    ...new Set(
+      bars
+        .filter((b) => b.swing > 0)
+        .map((b) => requirementForSensitivityInput(b.input))
+        .filter((r): r is RequirementInput => r !== null),
+    ),
+  ];
+  const mattersMost = ranking[0] ?? null;
 
   return {
     spend,
-    customerValue12m: value,
+    horizonMonths,
+    customerValue: value,
     breakEvenCustomers,
     expectedCustomers,
     aboveBreakEven: spend <= 0 || expectedCustomers * value >= spend,
     requirements,
     mattersMost,
+    ranking,
   };
 }

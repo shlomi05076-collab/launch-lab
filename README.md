@@ -6,7 +6,7 @@ Launch Lab helps anyone with a product idea answer **"Can my idea work, and what
 
 **Live:** [launch-lab-phi.vercel.app](https://launch-lab-phi.vercel.app) · **Style guide:** [/style-guide](https://launch-lab-phi.vercel.app/style-guide)
 
-> **Status: in development. M2 shipped (product types and viability math); building M3 (the guided "Test my idea" flow).** This README becomes a full product case study at M7.
+> **Status: in development. M3 shipped: [Test my idea](https://launch-lab-phi.vercel.app/idea) is live. Building M4 (expert mode).** This README becomes a full product case study at M7.
 
 **How the model works:** [docs/model.md](docs/model.md) explains it in plain language, with a hand-checkable worked example and every assumption's source, date and reasoning. The [engine readout](https://launch-lab-phi.vercel.app/lab) shows what would have to be true for each product type.
 
@@ -21,8 +21,8 @@ People commit savings or budgets to an idea before anyone tests whether the numb
 | M0 · Foundation | Scaffold, CI, design tokens, light/dark, style guide | ✅ Shipped |
 | M1 · Simulation engine | Tested Monte Carlo engine with documented assumptions | ✅ Shipped |
 | M2 · Product types + viability | Sourced templates for 5 product types, break-even and "what would have to be true" math | ✅ Shipped |
-| M3 · Test my idea | Guided 7-question flow and plain-language viability results | In progress |
-| M4 · Expert mode | Every input, your own data, charts, sensitivity, methodology | |
+| M3 · Test my idea | Guided flow, plain-language results, 1–3 year horizons, self-promotion, cheap tests | ✅ Shipped |
+| M4 · Expert mode | Every input, your own data, charts, sensitivity, methodology | In progress |
 | M5 · Saved + compare | Browser-saved scenarios, compare up to 3 | |
 | M6 · Share + analytics | Report links, OG images, cookieless funnel analytics | |
 | M7 · Polish | E2E tests, accessibility, founder tests, case study | |

@@ -135,7 +135,7 @@ export default function LabPage() {
               </th>
               {results.map(({ scenario, result }) => (
                 <td key={scenario.id} className="figures p-3 text-lg">
-                  {formatPercent(result.probPaybackWithin12)}
+                  {formatPercent(result.probPaybackWithin[12])}
                   <span className="block text-xs text-ink-muted">
                     never: {formatPercent(result.probNeverPayback)}
                   </span>

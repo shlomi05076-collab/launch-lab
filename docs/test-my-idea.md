@@ -1,6 +1,6 @@
 # "Test my idea" flow
 
-**Status:** approved 2026-10-22, to be built in M2 (math) and M3 (flow and screens).
+**Status:** built in M3 (2026-10-23). Live at `/idea`; the example is at `/idea/example`.
 
 The main entry point for Omer, a first-time founder with an idea and some savings, no marketing background, and no idea what CAC means. The goal: answer **"Can my idea work, and what would have to be true?"** in plain language, without ever claiming the idea will succeed or fail.
 
@@ -229,3 +229,30 @@ One small, concrete, real-world test for the assumption that matters most, gener
 2. **North star:** ideas checked per week (guided checks reaching "what would have to be true"). Scenarios compared stays as the expert-mode metric.
 3. **"Something else / not sure" in question 1:** follow-up "Is it for businesses or for people?"
 4. **Results wording:** the third tile reads "Chance to earn back the spend within a year". Status labels are Typical / Needs above-typical results / Rarely seen. A "How to test this cheaply" block follows "What would have to be true".
+
+## Added before M3 (2026-10-23)
+
+1. **Earn it back within 1, 2 or 3 years.**
+   - The results have a switch (default 1 year) and always show all three chances: "Within 1 year: 4% · within 2 years: 19% · within 3 years: 29%".
+   - One plain line explains that subscription businesses often take 1–2 years to earn back marketing spend. For business products it adds the sourced 16-month median for B2B software.
+2. **"I'll promote it myself."** Question 6 has a free option: posts, communities, word of mouth.
+   - It asks for hours a week (1–2, 3–5, 6–10, more than 10, or not sure → 3, an example).
+   - Hours become reach through labeled judgment values (`docs/model.md`). They are never converted into money.
+   - The results keep its customers separate: "From ads: about 13 customers. From your own promotion: about 1, for about 32 hours of your time and no money."
+   - Question 4 also offers "Nothing on ads". Question 6 then requires self-promotion.
+3. **A way forward when the chance is low** (below 25% for the chosen horizon):
+   - The headline stays honest and points to the next step, e.g. "…you'd likely get 5–31 customers, but paid ads alone probably won't earn back the spend within a year. Below: what would have to change, and how to test the riskiest part cheaply."
+   - The banned-verdict-words test covers this variant.
+
+## Fixed after the M3 walkthrough
+
+Clicking through as a first-time founder on mobile and desktop, in both themes, turned up:
+- **Landing preview card used jargon** ("Blended CAC", "Payback"). It's now a plain-language example result.
+- **The intro promised seven questions while the counter said six.** It now says "six short questions, then a quick check of your answers".
+- **Prices showed as "$9.00".** Whole-dollar amounts no longer show cents.
+- **The review called a rough estimate a "typical value".** Each default is now tagged as a typical value, rough estimate or example amount.
+- **The self-promotion headline repeated "your own promotion".** Rewritten.
+- **A consumer app was shown the B2B software payback median.** That stat now appears for business products only.
+- **The cheap test switched assumptions without saying why.** It now explains when the top assumption couldn't close the gap on its own, and says "people who join your waitlist" instead of "people who signed up".
+- **The break-even gauge's labels were about 4px tall on phones** (a scaled SVG). It's rebuilt in HTML/CSS so text stays readable.
+- **Drop-off labels wrapped, and unreachable rows said "not reachable" twice.** Both fixed.

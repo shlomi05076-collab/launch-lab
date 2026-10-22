@@ -4,6 +4,7 @@ import { type LaunchParams, resolveChannels, runLaunch } from "./funnel";
 import { createRng, type Rng } from "./rng";
 import { histogram, share, summarize } from "./stats";
 import {
+  HORIZONS,
   type ModelAssumptions,
   type Range,
   type ScenarioInput,
@@ -30,7 +31,20 @@ export function likelyParams(input: ScenarioInput, assumptions: ModelAssumptions
     paidConversion: input.funnel.paidConversion.likely,
     monthlyChurn: (input.pricing.monthlyChurn ?? ZERO).likely,
     purchasesPerYear: (input.pricing.purchasesPerYear ?? ONCE).likely,
+    ...(hasSelfPromotion(input, assumptions) && assumptions.selfPromotion
+      ? {
+          selfPromotion: {
+            impressionsPerHour: assumptions.selfPromotion.impressionsPerHour.likely,
+            clickThroughRate: assumptions.selfPromotion.clickThroughRate.likely,
+          },
+        }
+      : {}),
   };
+}
+
+/** True when the founder promotes it themselves and the model has assumptions for it. */
+export function hasSelfPromotion(input: ScenarioInput, assumptions: ModelAssumptions): boolean {
+  return (input.selfPromotion?.hoursPerWeek ?? 0) > 0 && assumptions.selfPromotion !== undefined;
 }
 
 /** One launch with every input at "likely" and no randomness. Calculator-checkable. */
@@ -46,6 +60,8 @@ type Samplers = {
   monthlyChurn: Sampler;
   /** Null for subscriptions, so their random sequence (and results) stay unchanged. */
   purchasesPerYear: Sampler | null;
+  /** Null without self-promotion, for the same reason. */
+  selfPromotion: { impressionsPerHour: Sampler; clickThroughRate: Sampler } | null;
 };
 
 function buildSamplers(input: ScenarioInput, assumptions: ModelAssumptions): Samplers {
@@ -60,6 +76,13 @@ function buildSamplers(input: ScenarioInput, assumptions: ModelAssumptions): Sam
     monthlyChurn: pert(input.pricing.monthlyChurn ?? ZERO),
     purchasesPerYear:
       input.pricing.model === "one_time" ? pert(input.pricing.purchasesPerYear ?? ONCE) : null,
+    selfPromotion:
+      hasSelfPromotion(input, assumptions) && assumptions.selfPromotion
+        ? {
+            impressionsPerHour: pert(assumptions.selfPromotion.impressionsPerHour),
+            clickThroughRate: pert(assumptions.selfPromotion.clickThroughRate),
+          }
+        : null,
   };
 }
 
@@ -88,6 +111,14 @@ function drawParams(samplers: Samplers, correlation: number, rng: Rng): LaunchPa
     })),
     monthlyChurn: samplers.monthlyChurn.quantile(rng()),
     purchasesPerYear: samplers.purchasesPerYear ? samplers.purchasesPerYear.quantile(rng()) : 1,
+    ...(samplers.selfPromotion
+      ? {
+          selfPromotion: {
+            impressionsPerHour: samplers.selfPromotion.impressionsPerHour.quantile(rng()),
+            clickThroughRate: samplers.selfPromotion.clickThroughRate.quantile(rng()),
+          },
+        }
+      : {}),
   };
 }
 
@@ -115,6 +146,8 @@ export function simulate(
   const mrr = new Float64Array(runs);
   const blendedCac = new Float64Array(runs);
   const payback = new Float64Array(runs);
+  const paidCac = new Float64Array(runs);
+  const selfPaying = new Float64Array(runs);
   const channelPaying = Array.from({ length: channelCount }, () => new Float64Array(runs));
   const channelCac = Array.from({ length: channelCount }, () => new Float64Array(runs));
   const weeklyPaying = Array.from({ length: weeks }, () => new Float64Array(runs));
@@ -132,6 +165,8 @@ export function simulate(
     mrr[r] = outcome.mrrAtEnd;
     blendedCac[r] = outcome.cac;
     payback[r] = outcome.paybackMonths;
+    paidCac[r] = cac(outcome.spend, outcome.stages.paying - outcome.selfPromotionPaying);
+    selfPaying[r] = outcome.selfPromotionPaying;
     for (let i = 0; i < channelCount; i++) {
       const paying = outcome.channelPaying[i] as number;
       (channelPaying[i] as Float64Array)[r] = paying;
@@ -184,7 +219,16 @@ export function simulate(
     mrrAtEnd: summarize(mrr),
     cac: summarize(blendedCac),
     paybackMonths: summarize(payback),
-    probPaybackWithin12: share(payback, (m) => m <= 12),
+    probPaybackWithin: Object.fromEntries(
+      HORIZONS.map((h) => [h, share(payback, (m) => m <= h)]),
+    ) as SimulationResult["probPaybackWithin"],
+    paidCac: summarize(paidCac),
+    selfPromotion: samplers.selfPromotion
+      ? {
+          hours: (input.selfPromotion?.hoursPerWeek ?? 0) * weeks,
+          paying: summarize(selfPaying),
+        }
+      : null,
     probNeverPayback: share(payback, (m) => !Number.isFinite(m)),
     histogram: { metric: "paying", bins: histogram(stageValues[4] as Float64Array, 24) },
   };
